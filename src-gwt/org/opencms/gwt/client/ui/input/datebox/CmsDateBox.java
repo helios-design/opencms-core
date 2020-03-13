@@ -86,6 +86,10 @@ import com.google.gwt.user.datepicker.client.DatePicker;
 public class CmsDateBox extends Composite
 implements HasValue<Date>, I_CmsFormWidget, I_CmsHasInit, HasKeyPressHandlers {
 
+    // TAKA: fixed server offset
+    //private static final int OFFSET_HOURS = -7;
+    private static final int OFFSET_HOURS = 0; // DLA
+
     /**
      * Drag and drop event preview handler.<p>
      *
@@ -419,7 +423,24 @@ implements HasValue<Date>, I_CmsFormWidget, I_CmsHasInit, HasKeyPressHandlers {
         } else if (allowInvalidValue() && value.equals(INVALID_DATE)) {
             return "INVALID_DATE";
         }
-        return String.valueOf(getValue().getTime());
+        //return String.valueOf(getValue().getTime());
+
+        String strValue = String.valueOf(getValue().getTime());
+
+        try {
+            long time = Long.parseLong(strValue);
+
+            // TAKA: hack it and convert to GMT-7
+            // (Calendar cannot be used in GWT)
+            long offsetMillis = OFFSET_HOURS * 60 * 60 * 1000;
+            // convert
+            long convertedTime = time - offsetMillis;
+            return "" + convertedTime;
+
+        } catch (NumberFormatException e) {
+            // if the String value is none long number make the field empty
+            return "INVALID_DATE";
+        }
     }
 
     /**
@@ -589,9 +610,28 @@ implements HasValue<Date>, I_CmsFormWidget, I_CmsHasInit, HasKeyPressHandlers {
      */
     public void setFormValueAsString(String value) {
 
-        if (!CmsStringUtil.isEmpty(value)) {
+        String timeValue = new String(value);
+
+        // TAKA: convert from UTC to GMT-7 (Phoenix server time)
+        if (value != null) {
             try {
                 long time = Long.parseLong(value);
+
+                // TAKA: hack it and convert to GMT+2
+                // (Calendar cannot be used in GWT)
+                long offsetMillis = OFFSET_HOURS * 60 * 60 * 1000;
+                // convert
+                long convertedTime = time + offsetMillis;
+                timeValue = "" + convertedTime;
+
+            } catch (NumberFormatException e) {
+                // if the String value is none long number make the field empty
+            }
+        }
+
+        if (timeValue != null) {
+            try {
+                long time = Long.parseLong(timeValue);
                 setValue(new Date(time));
             } catch (NumberFormatException e) {
                 // if the String value is none long number make the field empty
