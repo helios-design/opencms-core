@@ -33,6 +33,8 @@ import java.util.Date;
 
 import com.google.gwt.i18n.client.DateTimeFormat;
 
+import com.google.gwt.i18n.client.TimeZone; /* TAKA: import */
+
 /**
  * This class is an Helper with mostly static methods that convert a given date object
  * or that convert a given String.<p>
@@ -65,6 +67,11 @@ public final class CmsDateConverter {
 
     /** The formatter for the time format. */
     private static final DateTimeFormat Z_TIME_FORMAT = DateTimeFormat.getFormat(TIME_PATTERN);
+
+    /** TAKA: custom formatters with time zone */
+    private static final DateTimeFormat Z_DATE_TZ_FORMAT = DateTimeFormat.getFormat(DATE_PATTERN + " Z");
+    private static final DateTimeFormat Z_DATETIME_TZ_FORMAT = DateTimeFormat.getFormat(DATETIME_PATTERN + " Z");
+    private static final DateTimeFormat Z_TIME_TZ_FORMAT = DateTimeFormat.getFormat(TIME_PATTERN + " Z");
 
     /**
      * Hiding constructor for final class.<p>
@@ -110,7 +117,9 @@ public final class CmsDateConverter {
         if (date == null) {
             result = "";
         } else {
-            result = Z_DATE_FORMAT.format(date);
+            //result = Z_DATE_FORMAT.format(date);
+            // TAKA: hack it
+            result = Z_DATE_FORMAT.format(date, TimeZone.createTimeZone(0));
         }
         return result;
     }
@@ -132,7 +141,10 @@ public final class CmsDateConverter {
 
         Date result;
         try {
-            Date timeAsDate = Z_TIME_FORMAT.parse(time);
+            //Date timeAsDate = Z_TIME_FORMAT.parse(time);
+            // TAKA: hack it
+            Date timeAsDate = Z_TIME_TZ_FORMAT.parse(time + " +0000");
+
             result = new Date(date.getYear(), date.getMonth(), date.getDate());
             result.setHours(timeAsDate.getHours());
             result.setMinutes(timeAsDate.getMinutes());
@@ -152,7 +164,9 @@ public final class CmsDateConverter {
      */
     public static String getTime(Date date) {
 
-        return Z_TIME_FORMAT.format(date);
+        //return Z_TIME_FORMAT.format(date);
+        // TAKA: hack it
+        return Z_TIME_FORMAT.format(date, TimeZone.createTimeZone(0));
     }
 
     /**
@@ -196,7 +210,10 @@ public final class CmsDateConverter {
 
         Date date = null;
         if (dateText.length() > 0) {
-            date = Z_DATETIME_FORMAT.parse(dateText.trim());
+            //date = Z_DATETIME_FORMAT.parse(dateText.trim());
+            // TAKA: hack the date parsing
+            date = Z_DATETIME_TZ_FORMAT.parse(dateText.trim() + " +0000");
+
             if (!validateDate(date)) {
                 throw new IllegalArgumentException();
             }
@@ -217,7 +234,9 @@ public final class CmsDateConverter {
         if (date == null) {
             result = "";
         } else {
-            result = Z_DATE_FORMAT.format(date);
+            //result = Z_DATE_FORMAT.format(date);
+            // TAKA: hack it
+            result = Z_DATE_FORMAT.format(date, TimeZone.createTimeZone(0));
         }
         return result;
     }
@@ -239,7 +258,9 @@ public final class CmsDateConverter {
 
         Date date = null;
         if (dateText.length() > 0) {
-            date = Z_DATE_FORMAT.parse(dateText.trim());
+            //date = Z_DATE_FORMAT.parse(dateText.trim());
+            // TAKA: hack it
+            date = Z_DATE_TZ_FORMAT.parse(dateText.trim() + " +0000");
         }
         return date;
     }
@@ -257,7 +278,9 @@ public final class CmsDateConverter {
         if (date == null) {
             result = "";
         } else {
-            result = Z_DATETIME_FORMAT.format(date);
+            //result = Z_DATETIME_FORMAT.format(date);
+            // TAKA: hack the datetime by forcing GMT time
+            result = Z_DATETIME_FORMAT.format(date, TimeZone.createTimeZone(0));
         }
         return result;
     }
