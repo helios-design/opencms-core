@@ -288,11 +288,21 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
 
         String[] values;
         if ((value != null) && (value != "")) {
+            /*
             if (value.contains(",")) {
                 values = value.split(",");
             } else {
                 values = new String[] {value};
             }
+            */
+
+            // TAKA: change comma to pipe symbol
+            if (value.contains("|")) {
+                values = value.split("\\|");
+            } else {
+                values = new String[] {value};
+            }
+
             for (CmsCheckBox checkbox : m_checkboxes) {
                 checkbox.setChecked(false);
                 for (int j = 0; j < values.length; j++) {
@@ -348,7 +358,7 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
      * @return a string with all selected checkboxes
      * */
     private String generateValue() {
-
+        /*
         String result = "";
         for (CmsCheckBox checkbox : m_checkboxes) {
             if (checkbox.isChecked()) {
@@ -358,6 +368,20 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
         if (result.contains(",")) {
             result = result.substring(0, result.lastIndexOf(","));
         }
+        return result;
+        */
+
+        // TAKA replace comma with pipe symbol
+        String result = "";
+        for (CmsCheckBox checkbox : m_checkboxes) {
+            if (checkbox.isChecked()) {
+                result += checkbox.getInternalValue() + "|";
+            }
+        }
+        if (result.contains("|")) {
+            result = result.substring(0, result.lastIndexOf("|"));
+        }
+
         return result;
     }
 }
