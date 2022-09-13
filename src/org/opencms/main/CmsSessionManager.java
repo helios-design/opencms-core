@@ -108,6 +108,9 @@ public class CmsSessionManager {
     /** The user session mode. */
     private UserSessionMode m_userSessionMode;
 
+    /** optional flag to disable using IP address specific client token **/
+    public static final boolean GENERATE_IP_BASED_CLIENT_TOKEN = false;
+
     /**
      * Creates a new instance of the OpenCms session manager.<p>
      */
@@ -843,6 +846,11 @@ public class CmsSessionManager {
         if (CmsStringUtil.isEmptyOrWhitespaceOnly(ip)) {
             ip = request.getRemoteAddr();
         }
+
+        if (!GENERATE_IP_BASED_CLIENT_TOKEN) {
+            ip = "127.0.0.1"; // use localhost
+        }
+
         return String.valueOf((userAgent + ip).hashCode());
     }
 }
