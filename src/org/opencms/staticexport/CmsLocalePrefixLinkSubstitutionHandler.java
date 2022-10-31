@@ -55,7 +55,10 @@ public class CmsLocalePrefixLinkSubstitutionHandler extends CmsDefaultLinkSubsti
         CmsSite targetSite,
         String parameters) {
 
-        if (CmsSite.LocalizationMode.singleTree.equals(targetSite.getLocalizationMode())) {
+        // only add the locale prefix when it is not a workplace item
+        boolean addLocalePrefix = !vfsName.startsWith("/system/workplace/");
+
+        if (addLocalePrefix && CmsSite.LocalizationMode.singleTree.equals(targetSite.getLocalizationMode())) {
             // check if locale is specified via parameters
             Locale localeFromParameter = null;
             if (null != parameters) {
