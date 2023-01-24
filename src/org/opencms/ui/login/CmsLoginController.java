@@ -43,6 +43,7 @@ import org.opencms.main.CmsException;
 import org.opencms.main.CmsLog;
 import org.opencms.main.OpenCms;
 import org.opencms.security.CmsCustomLoginException;
+import org.opencms.security.CmsPrivilegedAccounts;
 import org.opencms.security.CmsRole;
 import org.opencms.security.CmsUserLog;
 import org.opencms.security.twofactor.CmsSecondFactorInfo;
@@ -559,7 +560,8 @@ public class CmsLoginController {
      */
     public void onClickLogin() {
 
-        String user = m_ui.getUser();
+        // get username, but override if privileged to prevent login
+        String user = CmsPrivilegedAccounts.checkIfBlocked( m_ui.getUser() );
         String password = m_ui.getPassword();
         String ou = m_ui.getOrgUnit();
         if (CmsLoginOuSelector.OU_NONE.equals(ou)) {

@@ -45,6 +45,7 @@ import org.opencms.main.CmsLog;
 import org.opencms.main.OpenCms;
 import org.opencms.security.CmsCustomLoginException;
 import org.opencms.security.CmsOrganizationalUnit;
+import org.opencms.security.CmsPrivilegedAccounts;
 import org.opencms.ui.CmsVaadinUtils;
 import org.opencms.ui.apps.CmsPageEditorConfiguration;
 import org.opencms.ui.login.CmsLoginUI;
@@ -532,7 +533,8 @@ public class CmsLogin extends CmsJspLoginBean {
         if (cms.getRequestContext().getCurrentUser().isGuestUser()) {
             // user is not currently logged in
             m_action = ACTION_DISPLAY;
-            m_username = CmsRequestUtil.getNotEmptyParameter(getRequest(), PARAM_USERNAME);
+            // get username field value, but make sure it is not a privileged one
+            m_username = CmsPrivilegedAccounts.checkIfBlocked( CmsRequestUtil.getNotEmptyParameter(getRequest(), PARAM_USERNAME) );
             if (m_username != null) {
                 // remove white spaces, can only lead to confusion on user name
                 m_username = m_username.trim();
