@@ -33,6 +33,8 @@ import java.util.Date;
 
 import com.google.gwt.i18n.client.DateTimeFormat;
 
+import com.google.gwt.i18n.client.TimeZone;
+
 /**
  * This class is an Helper with mostly static methods that convert a given date object
  * or that convert a given String.<p>
@@ -73,6 +75,14 @@ public final class CmsDateConverter {
 
     /** The formatter for the time format. */
     private static final DateTimeFormat Z_TIME_FORMAT = DateTimeFormat.getFormat(TIME_PATTERN);
+
+    /** A constant for whether to use server time instead of user's local time **/
+    public static final boolean USE_SERVER_TIME = true;
+
+    /** TAKA: custom formatters with time zone */
+    private static final DateTimeFormat Z_DATE_TZ_FORMAT = DateTimeFormat.getFormat(DATE_PATTERN + " Z");
+    private static final DateTimeFormat Z_DATETIME_TZ_FORMAT = DateTimeFormat.getFormat(DATETIME_PATTERN + " Z");
+    private static final DateTimeFormat Z_TIME_TZ_FORMAT = DateTimeFormat.getFormat(TIME_PATTERN + " Z");
 
     /**
      * Hiding constructor for final class.<p>
@@ -118,7 +128,12 @@ public final class CmsDateConverter {
         if (date == null) {
             result = "";
         } else {
-            result = Z_DATE_FORMAT.format(date);
+            if (USE_SERVER_TIME) {
+                result = Z_DATE_FORMAT.format(date, TimeZone.createTimeZone(0));
+            }
+            else {
+                result = Z_DATE_FORMAT.format(date);
+            }
         }
         return result;
     }
@@ -155,6 +170,11 @@ public final class CmsDateConverter {
         Date result;
         try {
             Date timeAsDate = timeFormat.parse(time);
+
+            if (USE_SERVER_TIME) {
+                timeAsDate = Z_TIME_TZ_FORMAT.parse(time + " +0000");
+            }
+
             result = new Date(date.getYear(), date.getMonth(), date.getDate());
             result.setHours(timeAsDate.getHours());
             result.setMinutes(timeAsDate.getMinutes());
@@ -174,8 +194,12 @@ public final class CmsDateConverter {
      * @return the short time format of a given date
      */
     public static String getTime(Date date) {
-
-        return Z_TIME_FORMAT.format(date);
+        if (USE_SERVER_TIME) {
+            return Z_TIME_FORMAT.format(date, TimeZone.createTimeZone(0));
+        }
+        else {
+            return Z_TIME_FORMAT.format(date);
+        }
     }
 
     /**
@@ -220,6 +244,11 @@ public final class CmsDateConverter {
         Date date = null;
         if (dateText.length() > 0) {
             date = Z_DATETIME_FORMAT_SHORTYEAR.parse(dateText.trim());
+
+            if (USE_SERVER_TIME) {
+                date = Z_DATETIME_TZ_FORMAT.parse(dateText.trim() + " +0000");
+            }
+
             if (!validateDate(date)) {
                 throw new IllegalArgumentException();
             }
@@ -241,6 +270,10 @@ public final class CmsDateConverter {
             result = "";
         } else {
             result = Z_DATE_FORMAT.format(date);
+
+            if (USE_SERVER_TIME) {
+                result = Z_DATE_FORMAT.format(date, TimeZone.createTimeZone(0));
+            }
         }
         return result;
     }
@@ -263,6 +296,10 @@ public final class CmsDateConverter {
         Date date = null;
         if (dateText.length() > 0) {
             date = Z_DATE_FORMAT_SHORTYEAR.parse(dateText.trim());
+
+            if (USE_SERVER_TIME) {
+                date = Z_DATE_TZ_FORMAT.parse(dateText.trim() + " +0000");
+            }
         }
         return date;
     }
@@ -281,6 +318,10 @@ public final class CmsDateConverter {
             result = "";
         } else {
             result = Z_DATETIME_FORMAT.format(date);
+
+            if (USE_SERVER_TIME) {
+                result = Z_DATETIME_FORMAT.format(date, TimeZone.createTimeZone(0));
+            }
         }
         return result;
     }
