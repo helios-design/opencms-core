@@ -81,6 +81,13 @@ We have tested this release on the Tomcat 9 servlet engine, which we recommend. 
 
 For the database, we provide support for MariaDB, MySQL, Oracle, PostgreSQL, MS SQL Server, DB2 and HSQLDB.
 
+## Building OpenCms
+
+To build:
+
+View --> Tool Windows --> Gradle
+
+Run task 'war' by right-clicking and selecting Run 'opencms-core [war]'
 
 ## Installing OpenCms
 
