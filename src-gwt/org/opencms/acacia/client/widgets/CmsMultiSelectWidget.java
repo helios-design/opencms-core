@@ -285,8 +285,8 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
 
         String[] values;
         if ((value != null) && (value != "")) {
-            if (value.contains(",")) {
-                values = value.split(",");
+            if (value.contains("|")) {
+                values = value.split("\\|");
             } else {
                 values = new String[] {value};
             }
@@ -349,11 +349,11 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
         String result = "";
         for (CmsCheckBox checkbox : m_checkboxes) {
             if (checkbox.isChecked()) {
-                result += checkbox.getInternalValue() + ",";
+                result += checkbox.getInternalValue() + "|";
             }
         }
-        if (result.contains(",")) {
-            result = result.substring(0, result.lastIndexOf(","));
+        if (result.contains("|")) {
+            result = result.substring(0, result.lastIndexOf("|"));
         }
         return result;
     }
