@@ -125,7 +125,7 @@ public class CmsSessionManager {
     private CmsObject m_adminCms;
 
     /** optional flag to disable using IP address specific client token **/
-    public static final boolean GENERATE_IP_BASED_CLIENT_TOKEN = true;
+    public static final boolean GENERATE_IP_BASED_CLIENT_TOKEN = false;
 
     /**
      * Creates a new instance of the OpenCms session manager.<p>
