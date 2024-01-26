@@ -254,6 +254,13 @@ dependencies {
     distribution group: 'com.google.zxing', name: 'core', version: '3.4.0'
     distribution group: 'com.google.zxing', name: 'javase', version: '3.4.0'
 
+    // for Java 11
+    distribution group: 'jakarta.xml.bind', name: 'jakarta.xml.bind-api', version: '3.0.0'
+    distribution group: 'org.glassfish.jaxb', name: 'jaxb-runtime', version: '3.0.0'
+    distribution group: 'jakarta.xml.ws', name: 'jakarta.xml.ws-api', version: '3.0.0'
+    distribution group: 'com.sun.xml.ws', name: 'jaxws-rt', version: '3.0.0'
+    distribution group: 'jakarta.jws', name: 'jakarta.jws-api', version: '3.0.0'
+
     // http://svn.alfresco.com/repos/alfresco-open-mirror/alfresco/HEAD/root/projects/alfresco-jlan/
     // Revision r55007
     distribution files('lib/runtime/jlan.jar')
