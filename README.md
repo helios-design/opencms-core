@@ -84,6 +84,15 @@ OpenCms 17 requires a Java Servlet 4.0 compatible web container. We have tested 
 On the database side, we provide support for MySQL, MariaDB, Oracle, PostgreSQL, MS SQL Server, DB2 and HSQLDB.
 
 
+## Building OpenCms
+
+To build:
+
+View --> Tool Windows --> Gradle
+
+Run task 'war' by right-clicking and selecting Run 'opencms-core [war]'
+
+
 ## Installing OpenCms
 
 ### Docker based installation
