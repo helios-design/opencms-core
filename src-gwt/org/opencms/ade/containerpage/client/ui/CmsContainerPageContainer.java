@@ -57,6 +57,9 @@ import com.google.gwt.user.client.ui.ComplexPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.Widget;
 
+import elemental2.dom.DOMRect;
+import jsinterop.base.Js;
+
 /**
  * Container page container.<p>
  *
@@ -617,6 +620,16 @@ public class CmsContainerPageContainer extends ComplexPanel implements I_CmsDrop
     }
 
     /**
+     * Gets the highlighting widget for the container.
+     *
+     * @return the highlighting widget
+     */
+    public CmsHighlightingBorder getHighlighting() {
+
+        return m_highlighting;
+    }
+
+    /**
      * Returns the parent container id.<p>
      *
      * @return the container parent id
@@ -696,15 +709,15 @@ public class CmsContainerPageContainer extends ComplexPanel implements I_CmsDrop
     /**
      * Puts a highlighting border around the container content.<p>
      */
-    public void highlightContainer() {
+    public void highlightContainer(boolean addSeparators) {
 
-        highlightContainer(CmsPositionBean.getBoundingClientRect(getElement()));
+        highlightContainer(CmsPositionBean.getBoundingClientRect(getElement()), addSeparators);
     }
 
     /**
      * @see org.opencms.ade.containerpage.client.ui.I_CmsDropContainer#highlightContainer(org.opencms.gwt.client.util.CmsPositionBean)
      */
-    public void highlightContainer(CmsPositionBean positionInfo) {
+    public void highlightContainer(CmsPositionBean positionInfo, boolean addSeparators) {
 
         // remove any remaining highlighting
         if (m_highlighting != null) {
@@ -713,10 +726,21 @@ public class CmsContainerPageContainer extends ComplexPanel implements I_CmsDrop
         // cache the position info, to be used during drag and drop
         m_ownPosition = positionInfo;
         m_highlighting = new CmsHighlightingBorder(
-            m_ownPosition,
+            m_ownPosition.getHeight(),
+            m_ownPosition.getWidth(),
+            m_ownPosition.getLeft(),
+            m_ownPosition.getTop(),
             CmsHighlightingBorder.BorderColor.red,
-            CmsContainerpageDNDController.HIGHLIGHTING_OFFSET);
-        RootPanel.get().add(m_highlighting);
+            CmsContainerpageDNDController.HIGHLIGHTING_OFFSET,
+            addSeparators);
+        if (addSeparators) {
+            m_highlighting.setMidpoints(getMidpoints());
+        } else {
+            // CmsGwtLog.trace("addSeparators = false");
+        }
+        if (getElement().getOffsetParent() != null) {
+            RootPanel.get().add(m_highlighting);
+        }
     }
 
     /**
@@ -921,6 +945,11 @@ public class CmsContainerPageContainer extends ComplexPanel implements I_CmsDrop
         };
     }
 
+    public void setPlaceholderIndex(int index) {
+
+        m_placeholderIndex = index;
+    }
+
     /**
      * @see org.opencms.ade.containerpage.client.ui.I_CmsDropContainer#setPlaceholderVisibility(boolean)
      */
@@ -976,6 +1005,37 @@ public class CmsContainerPageContainer extends ComplexPanel implements I_CmsDrop
     public void updatePositionInfo() {
 
         m_ownPosition = CmsPositionBean.getBoundingClientRect(getElement());
+    }
+
+    /**
+     * Returns a list of midpoints between container elements as vertical offsets relative to the container top, but only if the container elements are positioned vertically below each other (otherwise the empty list is returned).
+     *
+     * @return the list of midpoints between container elements
+     */
+    List<Integer> getMidpoints() {
+
+        List<CmsContainerPageElementPanel> elems = getAllDragElements();
+        List<Integer> result = new ArrayList<>();
+        DOMRect[] rects = new DOMRect[elems.size()];
+        elemental2.dom.Element containerElem = Js.cast(getElement());
+        double myTop = containerElem.getBoundingClientRect().top;
+        for (int i = 0; i < getAllDragElements().size(); i++) {
+            elemental2.dom.Element nativeElem = Js.cast(elems.get(i).getElement());
+            rects[i] = nativeElem.getBoundingClientRect();
+        }
+        for (int i = 1; i < rects.length; i++) {
+            if (rects[i].top <= rects[i - 1].top) {
+                // return empty list - don't show midpoints if top coordinates not ascending
+                return result;
+            }
+        }
+        for (int i = 0; i < (rects.length - 1); i++) {
+            double currentBottom = rects[i].top + rects[i].height;
+            double nextTop = rects[i + 1].top;
+            Double middle = Double.valueOf(Math.round((nextTop + currentBottom) / 2));
+            result.add(Integer.valueOf((int)(middle.doubleValue() - myTop)));
+        }
+        return result;
     }
 
     /**

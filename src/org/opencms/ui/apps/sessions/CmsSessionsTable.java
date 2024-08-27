@@ -264,10 +264,10 @@ public class CmsSessionsTable extends Table {
         Icon(null, Label.class, null, false),
 
         /**Icon column.*/
-        IS_ACTIVE(Messages.GUI_MESSAGES_BROADCAST_COLS_STATUS_0, Long.class, new Long(0L), false),
+        IS_ACTIVE(Messages.GUI_MESSAGES_BROADCAST_COLS_STATUS_0, Long.class, Long.valueOf(0L), false),
 
         /**Is Broadcast send but not displayed.*/
-        IS_WAITING(null, Boolean.class, new Boolean(false), false),
+        IS_WAITING(null, Boolean.class, Boolean.valueOf(false), false),
 
         /**Date of expiration column. */
         OrgUnit(Messages.GUI_MESSAGES_BROADCAST_COLS_ORGUNIT_0, String.class, "", false),
@@ -536,7 +536,7 @@ public class CmsSessionsTable extends Table {
                         }
                         return CmsVaadinUtils.getMessageText(
                             Messages.GUI_MESSAGES_LAST_ACTIVITY_MINUTES_1,
-                            new Integer(ret[1]));
+                            Integer.valueOf(ret[1]));
                     }
                     return null;
                 }
@@ -654,7 +654,7 @@ public class CmsSessionsTable extends Table {
             item.getItemProperty(TableProperty.DateCreated).setValue(
                 session.getAgeOfSession() + " " + CmsVaadinUtils.getMessageText(Messages.GUI_MESSAGES_HOUR_0));
             item.getItemProperty(TableProperty.IS_ACTIVE).setValue(
-                new Long(System.currentTimeMillis() - session.getTimeLastAction()));
+                Long.valueOf(System.currentTimeMillis() - session.getTimeLastAction()));
             item.getItemProperty(TableProperty.OrgUnit).setValue(userOu.getName());
             item.getItemProperty(TableProperty.Project).setValue(
                 A_CmsUI.getCmsObject().readProject(session.getProject()).getName());
@@ -665,7 +665,7 @@ public class CmsSessionsTable extends Table {
             item.getItemProperty(TableProperty.Site).setValue(siteTitle);
 
             item.getItemProperty(TableProperty.IS_WAITING).setValue(
-                new Boolean(!session.getBroadcastQueue().isEmpty()));
+                Boolean.valueOf(!session.getBroadcastQueue().isEmpty()));
 
         }
 

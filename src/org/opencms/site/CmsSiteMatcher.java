@@ -32,6 +32,7 @@ import org.opencms.util.CmsStringUtil;
 
 import java.io.Serializable;
 import java.net.URI;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 
@@ -274,6 +275,21 @@ public final class CmsSiteMatcher implements Cloneable, Serializable {
     }
 
     /**
+     * Checks if this site matcher equals another site matcher, ignoring the scheme.
+     *
+     * @param matcher the matcher to compare
+     * @return true if the site matchers are equal
+     */
+    public boolean equalsIgnoreScheme(CmsSiteMatcher matcher) {
+        for (String scheme: Arrays.asList("http", "https")) {
+            if (this.forDifferentScheme(scheme).equals(matcher)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Generates a site matcher equivalent to this one but with a different scheme.<p>
      *
      * @param scheme the new scheme
@@ -363,7 +379,7 @@ public final class CmsSiteMatcher implements Cloneable, Serializable {
     public int hashCode() {
 
         if (m_hashCode == null) {
-            m_hashCode = new Integer(toString().hashCode());
+            m_hashCode = Integer.valueOf(toString().hashCode());
         }
         return m_hashCode.intValue();
     }

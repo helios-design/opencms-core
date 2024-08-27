@@ -102,6 +102,7 @@ public class TestSolrFieldConfiguration extends OpenCmsTestCase {
         suite.addTest(new TestSolrFieldConfiguration("testLuceneMigration"));
         suite.addTest(new TestSolrFieldConfiguration("testOfflineIndexAccess"));
         suite.addTest(new TestSolrFieldConfiguration("testListSortOptionFields"));
+        suite.addTest(new TestSolrFieldConfiguration("testListSearchFields"));
         // this test case must be the last one
         suite.addTest(new TestSolrFieldConfiguration("testIngnoreMaxRows"));
 
@@ -213,9 +214,9 @@ public class TestSolrFieldConfiguration extends OpenCmsTestCase {
 
         // Test source field
         Date dateValue = res.getDateField("arelease_en_dt");
-        assertTrue("1308210520000".equals(new Long(dateValue.getTime()).toString()));
+        assertTrue("1308210520000".equals(Long.valueOf(dateValue.getTime()).toString()));
         dateValue = res.getDateField("arelease_de_dt");
-        assertTrue("1308210420000".equals(new Long(dateValue.getTime()).toString()));
+        assertTrue("1308210420000".equals(Long.valueOf(dateValue.getTime()).toString()));
 
         // test 'default' value for the whole field
         fieldValue = res.getField("ahomepage_de");
@@ -557,6 +558,61 @@ public class TestSolrFieldConfiguration extends OpenCmsTestCase {
      * Checks if the extra fields for list sort options are index correctly.
      * @throws Exception should not happen
      */
+    public void testListSearchFields() throws Exception {
+
+        CmsObject cms = getCmsObject();
+        cms.getRequestContext().setSiteRoot("/");
+        importModule(getCmsObject(), "org.opencms.test.modules.solr.listsearchfields");
+
+        String query = "q=*:*&fq=parent-folders:\"/sites/default/containerpages/\"&rows=10";
+        CmsSolrIndex index = OpenCms.getSearchManager().getIndexSolr(CmsSolrIndex.DEFAULT_INDEX_NAME_ONLINE);
+        CmsSolrResultList results = index.search(cms, query);
+        for (CmsSearchResource result : results) {
+            switch (result.getRootPath()) {
+                case "/sites/default/containerpages/index.html":
+                    checkIndexedListSearchFields(
+                        result,
+                        "Container pages description set via the sitemap editor",
+                        "Container pages keywords set via the sitemap editor");
+                    break;
+                case "/sites/default/containerpages/other.html":
+                    checkIndexedListSearchFields(result, null, null);
+                    break;
+                case "/sites/default/containerpages/sub-page-without-extra-properties/index.html":
+                    checkIndexedListSearchFields(result, null, null);
+                    break;
+                case "/sites/default/containerpages/subpage/index.html":
+                    checkIndexedListSearchFields(
+                        result,
+                        "Sub page description set via the page editor",
+                        "Sub page keywords set via the page editor");
+                    break;
+            }
+        }
+        // The update is more a test for the CmsVfsIndexer, but it's mostly relevant here, so we put it here
+        CmsResource folderToAdjust = cms.readResource("/sites/default/containerpages");
+        cms.lockResource(folderToAdjust);
+        cms.writePropertyObjects(
+            folderToAdjust,
+            Collections.singletonList(
+                new CmsProperty(CmsPropertyDefinition.PROPERTY_DESCRIPTION, "Adjusted description from folder", null)));
+        cms.unlockResource(folderToAdjust);
+        OpenCms.getPublishManager().publishProject(cms, new CmsShellReport(cms.getRequestContext().getLocale()));
+        OpenCms.getPublishManager().waitWhileRunning();
+        String queryForChangedResource = "q=*:*&fq=path:\"/sites/default/containerpages/index.html\"&rows=1";
+        CmsSolrResultList changedResults = index.search(cms, queryForChangedResource);
+        assertEquals(1, changedResults.size());
+        CmsSearchResource defaultFile = changedResults.get(0);
+        checkIndexedListSearchFields(
+            defaultFile,
+            "Adjusted description from folder",
+            "Container pages keywords set via the sitemap editor");
+    }
+
+    /**
+     * Checks if the extra fields for list sort options are index correctly.
+     * @throws Exception should not happen
+     */
     public void testListSortOptionFields() throws Exception {
 
         CmsObject cms = getCmsObject();
@@ -751,6 +807,22 @@ public class TestSolrFieldConfiguration extends OpenCmsTestCase {
         }
         echo("OK, search could not be executed and the cause was a CmsRoleViolationException.");
         solrIndex.setEnabled(false);
+    }
+
+    /**
+     * Checks if the extra fields for the list sort options are indexed correctly.
+     * @param result the search result
+     * @param title the expected display title
+     * @param titleEn the expected display title for English
+     * @param order the expected display order
+     * @param orderEn the expected display order for English
+     * @param instanceDateCopyField the field from which the instance date is expected to be copied.
+     */
+    private void checkIndexedListSearchFields(CmsSearchResource result, String description, String keywords) {
+
+        echo("Checking resource \"" + result.getRootPath() + "\" ...");
+        assertEquals(description, result.getField("description_en"));
+        assertEquals(keywords, result.getField("keywords_en"));
     }
 
     /**

@@ -34,6 +34,7 @@ import org.opencms.gwt.client.dnd.CmsDNDHandler;
 import org.opencms.gwt.client.ui.A_CmsHoverHandler;
 import org.opencms.gwt.client.ui.css.I_CmsLayoutBundle;
 import org.opencms.gwt.client.util.I_CmsUniqueActiveItem;
+import org.opencms.gwt.shared.CmsGwtConstants;
 
 import java.util.Iterator;
 
@@ -117,7 +118,7 @@ implements HasMouseOverHandlers, HasMouseOutHandlers, I_CmsUniqueActiveItem, I_C
      */
     public CmsElementOptionBar(CmsContainerPageElementPanel containerElement) {
 
-        m_panel = new FlowPanel();
+        m_panel = new FlowPanel(CmsGwtConstants.TAG_OC_EDITPOINT);
         m_containerElement = containerElement;
         initWidget(m_panel);
         HoverHandler handler = new HoverHandler();
@@ -125,6 +126,13 @@ implements HasMouseOverHandlers, HasMouseOutHandlers, I_CmsUniqueActiveItem, I_C
         addMouseOutHandler(handler);
         setStyleName(I_CmsElementToolbarContext.ELEMENT_OPTION_BAR_CSS_CLASS);
         addStyleName(I_CmsLayoutBundle.INSTANCE.generalCss().opencms());
+        if (containerElement.isReused()) {
+            addStyleName(
+                org.opencms.ade.containerpage.client.ui.css.I_CmsLayoutBundle.INSTANCE.containerpageCss().reusedElement());
+        } else {
+            removeStyleName(
+                org.opencms.ade.containerpage.client.ui.css.I_CmsLayoutBundle.INSTANCE.containerpageCss().reusedElement());
+        }
     }
 
     /**

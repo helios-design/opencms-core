@@ -210,6 +210,19 @@ configurations {
         extendsFrom testGwtCompile
     }
 
+    // Fix the jetty incompatibility for the version from distribution used by Solr and the one for the GWT test cases.
+    testGwtRuntimeClasspath{
+        resolutionStrategy {
+            force 'org.eclipse.jetty:jetty-client:9.4.50.v20221201'
+            force 'org.eclipse.jetty:jetty-http:9.4.50.v20221201'
+            force 'org.eclipse.jetty:jetty-io:9.4.50.v20221201'
+            force 'org.eclipse.jetty:jetty-util:9.4.50.v20221201'
+            force 'org.eclipse.jetty.http2:http2-common:9.4.50.v20221201'
+            force 'org.eclipse.jetty.http2:http2-client:9.4.50.v20221201'
+            force 'org.eclipse.jetty.http2:http2-http-client-transport:9.4.50.v20221201'
+        }
+    }
+
     setupCompile {
         transitive = false
         extendsFrom modulesCompile
@@ -223,8 +236,8 @@ configurations {
 }
 
 // We want no transitive dependencies
-configurations.all {
-    transitive = false;
+configurations.configureEach {
+    transitive = false
 }
 
 
@@ -252,6 +265,8 @@ eclipse.classpath.file {
 }
 
 eclipse.classpath.plusConfigurations = configurations.findAll { it.name.endsWith('Compile') }
+
+eclipse.classpath.downloadSources=true
 
 wrapper {
     gradleVersion = '7.5.1'
@@ -719,10 +734,10 @@ tlddoc {
 
 task tlddocZip (type: Zip, dependsOn: tlddoc) {
     archiveFileName = 'tld.zip'
-    from ("${project.java.docsDir}/tlddoc/") {
+    from ("${project.docsDir}/tlddoc/") {
         include '**/*'
     }
-    destinationDirectory = file("${project.java.docsDir}")
+    destinationDirectory = file("${project.docsDir}")
 }
 
 def preserveLibModules = ''
@@ -1119,7 +1134,6 @@ test {
     systemProperties['test.webapp.path'] = "${projectDir}/webapp"
     systemProperties['test.project.path'] = "${projectDir}"
     systemProperties['test.build.folder'] =sourceSets.test.output.resourcesDir
-    jvmArgs '-XX:MaxPermSize=256m'
     testLogging.showStandardStreams = true
     ignoreFailures true
     filter {
@@ -1128,13 +1142,13 @@ test {
 }
 
 task testSingle(type: Test, dependsOn: [compileTestJava]) {
-    description "Runs a specified test case set like this: -PtestCaseToRun=org/opencms/main/TestCmsSystemInfo*"
-    classpath = sourceSets.test.compileClasspath
+    description "Runs a specified test case set like this: -PtestCaseToRun=org.opencms.main.TestCmsSystemInfo*"
+    inputs.dir "${projectDir}/test/data"
+    inputs.dir "${projectDir}/webapp"
+
     useJUnit()
     if (!project.hasProperty('testCaseToRun')){
-        ext {
-            testCaseToRun='org/opencms/main/TestCmsSystemInfo*'
-        }
+        project.ext.testCaseToRun='org.opencms.main.TestCmsSystemInfo*'
     }
     doFirst{
         println "Running test case : ${testCaseToRun}"
@@ -1148,7 +1162,6 @@ task testSingle(type: Test, dependsOn: [compileTestJava]) {
     systemProperties['test.webapp.path'] = "${projectDir}/webapp"
     systemProperties['test.build.folder'] =sourceSets.test.output.resourcesDir
     maxHeapSize = max_heap_size
-    jvmArgs '-XX:MaxPermSize=256m'
     testLogging.showStandardStreams = true
     ignoreFailures true
 }
@@ -1193,13 +1206,11 @@ task testGwt(type: Test, dependsOn: [compileTestGwtJava]) {
     systemProperties['gwt.args'] = "-logLevel WARN -setProperty locale=en"
     systemProperties['java.awt.headless'] = "true"
     maxHeapSize = max_heap_size
-    jvmArgs '-XX:MaxPermSize=256m'
     testLogging.showStandardStreams = true
     ignoreFailures true
 }
 
 artifacts {
-    archives jar
     archives sourcesJar
 
     if (project.hasProperty('publish_repository')) {

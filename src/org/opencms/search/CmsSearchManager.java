@@ -201,7 +201,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 case I_CmsEventListener.EVENT_RESOURCE_CREATED:
                 case I_CmsEventListener.EVENT_RESOURCE_AND_PROPERTIES_MODIFIED:
                 case I_CmsEventListener.EVENT_RESOURCE_MODIFIED:
-                    if ((change != null) && change.equals(new Integer(CmsDriverManager.NOTHING_CHANGED))) {
+                    if ((change != null) && change.equals(Integer.valueOf(CmsDriverManager.NOTHING_CHANGED))) {
                         // skip lock & unlock
                         return;
                     }
@@ -1748,7 +1748,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
     /**
      * Initializes all configured document types, index sources and search indexes.<p>
      *
-     * This methods needs to be called if after a change in the index configuration has been made.
+     * This method needs to be called if after a change in the index configuration has been made.
      */
     public void initializeIndexes() {
 
@@ -2356,7 +2356,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 Messages.get().getBundle().key(
                     Messages.LOG_PARSE_EXTRACTION_CACHE_AGE_FAILED_2,
                     extractionCacheMaxAge,
-                    new Float(DEFAULT_EXTRACTION_CACHE_MAX_AGE)),
+                    Float.valueOf(DEFAULT_EXTRACTION_CACHE_MAX_AGE)),
                 e);
             setExtractionCacheMaxAge(DEFAULT_EXTRACTION_CACHE_MAX_AGE);
         }
@@ -2423,7 +2423,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 Messages.get().getBundle().key(
                     Messages.LOG_PARSE_EXCERPT_LENGTH_FAILED_2,
                     maxExcerptLength,
-                    new Integer(DEFAULT_EXCERPT_LENGTH)),
+                    Integer.valueOf(DEFAULT_EXCERPT_LENGTH)),
                 e);
             setMaxExcerptLength(DEFAULT_EXCERPT_LENGTH);
         }
@@ -2453,7 +2453,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 Messages.get().getBundle().key(
                     Messages.LOG_PARSE_MAX_INDEX_WAITTIME_FAILED_2,
                     maxIndexWaitTime,
-                    new Long(DEFAULT_MAX_INDEX_WAITTIME)),
+                    Long.valueOf(DEFAULT_MAX_INDEX_WAITTIME)),
                 e);
             setMaxIndexWaitTime(DEFAULT_MAX_INDEX_WAITTIME);
         }
@@ -2483,7 +2483,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 Messages.get().getBundle().key(
                     Messages.LOG_PARSE_MAXCOMMIT_FAILED_2,
                     value,
-                    new Integer(DEFAULT_MAX_MODIFICATIONS_BEFORE_COMMIT)),
+                    Integer.valueOf(DEFAULT_MAX_MODIFICATIONS_BEFORE_COMMIT)),
                 e);
             setMaxModificationsBeforeCommit(DEFAULT_MAX_MODIFICATIONS_BEFORE_COMMIT);
         }
@@ -2514,7 +2514,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 Messages.get().getBundle().key(
                     Messages.LOG_PARSE_OFFLINE_UPDATE_FAILED_2,
                     offlineUpdateFrequency,
-                    new Long(DEFAULT_OFFLINE_UPDATE_FREQNENCY)),
+                    Long.valueOf(DEFAULT_OFFLINE_UPDATE_FREQNENCY)),
                 e);
             setOfflineUpdateFrequency(DEFAULT_OFFLINE_UPDATE_FREQNENCY);
         }
@@ -2551,7 +2551,10 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
             setTimeout(Long.parseLong(value));
         } catch (Exception e) {
             LOG.error(
-                Messages.get().getBundle().key(Messages.LOG_PARSE_TIMEOUT_FAILED_2, value, new Long(DEFAULT_TIMEOUT)),
+                Messages.get().getBundle().key(
+                    Messages.LOG_PARSE_TIMEOUT_FAILED_2,
+                    value,
+                    Long.valueOf(DEFAULT_TIMEOUT)),
                 e);
             setTimeout(DEFAULT_TIMEOUT);
         }
@@ -2988,8 +2991,8 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
 
             List<CmsPublishedResource> updateResources = new ArrayList<CmsPublishedResource>();
             for (CmsPublishedResource res : publishedResources) {
-                if (res.isFolder() || res.getState().isUnchanged()) {
-                    // folders and unchanged resources don't need to be indexed after publish
+                if (res.getState().isUnchanged()) {
+                    // unchanged resources don't need to be indexed after publish
                     continue;
                 }
                 if (res.getState().isDeleted() || res.getState().isNew() || res.getState().isChanged()) {

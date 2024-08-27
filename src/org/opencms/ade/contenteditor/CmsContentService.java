@@ -35,6 +35,7 @@ import org.opencms.acacia.shared.CmsTabInfo;
 import org.opencms.acacia.shared.CmsType;
 import org.opencms.acacia.shared.CmsValidationResult;
 import org.opencms.ade.configuration.CmsADEConfigData;
+import org.opencms.ade.configuration.CmsResourceTypeConfig;
 import org.opencms.ade.containerpage.CmsContainerpageService;
 import org.opencms.ade.containerpage.CmsElementUtil;
 import org.opencms.ade.containerpage.shared.CmsCntPageData;
@@ -708,6 +709,22 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
                             org.opencms.ade.contenteditor.Messages.ERR_EDITOR_RESTRICTED_0));
                 }
                 if (CmsResourceTypeXmlContent.isXmlContent(resource) || createNew) {
+                    CmsADEConfigData config = OpenCms.getADEManager().lookupConfiguration(cms, resource.getRootPath());
+                    boolean reused = false;
+                    try {
+                        I_CmsResourceType type = OpenCms.getResourceManager().getResourceType(resource);
+                        if (type != null) {
+                            String typeStr = type.getTypeName();
+                            CmsResourceTypeConfig typeConfig = config.getResourceType(typeStr);
+                            if ((typeConfig != null) && typeConfig.isCheckReuse()) {
+                                if (OpenCms.getADEManager().getOfflineElementUses(resource).limit(2).count() > 1) {
+                                    reused = true;
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        LOG.info(e.getLocalizedMessage(), e);
+                    }
                     if (CmsStringUtil.isNotEmptyOrWhitespaceOnly(paramLocale)) {
                         locale = CmsLocaleManager.getLocale(paramLocale);
                     }
@@ -760,6 +777,7 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
                             null);
                     }
                     result.setDirectEdit(isDirectEdit);
+                    result.setReusedElement(reused);
                     return result;
                 }
             } catch (Throwable e) {
@@ -2312,19 +2330,27 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
                     tabInfos.add(
                         new CmsTabInfo(
                             Messages.get().getBundle(workplaceLocale).key(Messages.GUI_CONTENT_TAB_LABEL_0),
+                            Messages.GUI_CONTENT_TAB_LABEL_0,
+                            Messages.GUI_CONTENT_TAB_LABEL_0,
                             "content",
                             firstContentAttributeName.substring(entity.getTypeName().length() + 1),
                             false,
+                            null,
+                            null,
                             null));
                 }
                 if (addedVisibleAttrs.size() > 0) {
                     tabInfos.add(
                         new CmsTabInfo(
                             Messages.get().getBundle(workplaceLocale).key(Messages.GUI_SETTINGS_TAB_LABEL_0),
+                            Messages.GUI_SETTINGS_TAB_LABEL_0,
+                            Messages.GUI_SETTINGS_TAB_LABEL_0,
                             CmsContentDefinition.SETTINGS_TAB_ID,
                             CmsFileUtil.removeLeadingSeparator(addedVisibleAttrs.iterator().next()),
                             false,
-                            Messages.get().getBundle(workplaceLocale).key(Messages.GUI_SETTINGS_TAB_DESCRIPTION_0)));
+                            Messages.get().getBundle(workplaceLocale).key(Messages.GUI_SETTINGS_TAB_DESCRIPTION_0),
+                            null,
+                            null));
                 }
             }
 
@@ -2807,7 +2833,7 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
                         }
                         String checkedCategories = "";
                         if (null != entity) {
-                            checkedCategories = CmsEntity.getValueForPath(entity, new String[] {value.getPath()});
+                            checkedCategories = CmsEntity.getValueForPath(entity, value.getPath().split("/"));
                         }
                         List<String> checkedCategoryList = Arrays.asList(checkedCategories.split(","));
                         for (String category : checkedCategoryList) {

@@ -96,13 +96,15 @@
 <!ELEMENT mailfrom (#PCDATA)>
 <!ELEMENT mailhost EMPTY>
 <!ATTLIST mailhost
+	id CDATA #IMPLIED
 	name CDATA #REQUIRED
 	order CDATA #IMPLIED
 	port CDATA #IMPLIED
 	protocol CDATA #IMPLIED
 	security CDATA #IMPLIED
 	user CDATA  #IMPLIED
-	password CDATA #IMPLIED>
+	password CDATA #IMPLIED
+	mailfrom CDATA #IMPLIED>
 
 <!--
 # Resource initializer settings.

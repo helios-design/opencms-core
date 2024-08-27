@@ -176,7 +176,7 @@ public class CmsSolrDocument implements I_CmsSearchDocument {
 
         if (OpenCms.getSearchManager().getSolrServerConfiguration().getSolrSchema().hasExplicitField(
             CmsSearchField.FIELD_SIZE)) {
-            m_doc.addField(CmsSearchField.FIELD_SIZE, new Integer(length));
+            m_doc.addField(CmsSearchField.FIELD_SIZE, Integer.valueOf(length));
         }
     }
 
@@ -265,7 +265,7 @@ public class CmsSolrDocument implements I_CmsSearchDocument {
                             if (fieldType instanceof DatePointField) {
                                 //sometime,the val is already Iso8601 formated
                                 if(!val.contains("Z"))
-                                    val = CmsSearchUtil.getDateAsIso8601(new Long(val).longValue());
+                                    val = CmsSearchUtil.getDateAsIso8601(Long.valueOf(val).longValue());
                             }
                         } catch (SolrException e) {
                             LOG.debug(e.getMessage(), e);

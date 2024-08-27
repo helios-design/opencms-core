@@ -58,7 +58,6 @@ import java.util.Map.Entry;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Element;
@@ -81,6 +80,14 @@ import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.AbsolutePanel;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.RootPanel;
+
+import elemental2.core.JsArray;
+import elemental2.core.JsObject;
+import elemental2.dom.MutationObserver;
+import elemental2.dom.MutationObserver.MutationObserverCallbackFn;
+import elemental2.dom.MutationObserverInit;
+import elemental2.dom.MutationRecord;
+import jsinterop.base.Js;
 
 /**
  * Content element within a container-page.<p>
@@ -177,14 +184,14 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
 
     }
 
+    /** Property used to mark an element as belonging to this widget. */
+    public static final String PROP_ELEMENT_OBJECT_ID = "element_object_id";
+
     /** The is model group property key. */
     public static final String PROP_IS_MODEL_GROUP = "is_model_group";
 
     /** The former copy model property. */
     public static final String PROP_WAS_MODEL_GROUP = "was_model_group";
-
-    /** Property used to mark an element as belonging to this widget. */
-    public static final String PROP_ELEMENT_OBJECT_ID = "element_object_id";
 
     /** Highlighting border for this element. */
     protected CmsHighlightingBorder m_highlighting;
@@ -227,8 +234,14 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
     /** Indicates whether this element has settings to edit. */
     private boolean m_hasSettings;
 
+    /** The resource type icon CSS classes. */
+    private String m_iconClasses;
+
     /** The inheritance info for this element. */
     private CmsInheritanceInfo m_inheritanceInfo;
+
+    /** The lock information. */
+    private CmsElementLockInfo m_lockInfo;
 
     /** The model group id. */
     private CmsUUID m_modelGroupId;
@@ -236,11 +249,14 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
     /** The is new element type. */
     private String m_newType;
 
-    /** The registered node insert event handler. */
-    private JavaScriptObject m_nodeInsertHandler;
+    /** The registered mutation observer. */
+    private MutationObserver m_mutationObserver;
 
     /** The no edit reason, if empty editing is allowed. */
     private String m_noEditReason;
+
+    /** A random id, which is also stored as a property on the HTML element for this widget. */
+    private String m_objectId;
 
     /** The parent drop target. */
     private I_CmsDropContainer m_parent;
@@ -257,9 +273,11 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
     /** The resource type. */
     private String m_resourceType;
 
+    /** True if this element is marked as 'reused'. */
+    private boolean m_reused;
+
     /** The element resource site-path. */
     private String m_sitePath;
-
     /** The sub title. */
     private String m_subTitle;
 
@@ -274,20 +292,12 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
 
     /** The former copy model status. */
     private boolean m_wasModelGroup;
+
     /**
      * Indicates if the current user has write permissions on the element resource.
      * Without write permissions, the element can not be edited.
      **/
     private boolean m_writePermission;
-
-    /** A random id, which is also stored as a property on the HTML element for this widget. */
-    private String m_objectId;
-
-    /** The resource type icon CSS classes. */
-    private String m_iconClasses;
-
-    /** The lock information. */
-    private CmsElementLockInfo m_lockInfo;
 
     /**
      * Constructor.<p>
@@ -311,6 +321,7 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
      * @param wasModelGroup in case of a former copy model group
      * @param elementView the element view of the element
      * @param iconClasses the resource type icon CSS classes
+     * @param isReused true if this element is marked as reused
      */
     public CmsContainerPageElementPanel(
         Element element,
@@ -331,7 +342,8 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
         CmsUUID modelGroupId,
         boolean wasModelGroup,
         CmsUUID elementView,
-        String iconClasses) {
+        String iconClasses,
+        boolean isReused) {
 
         super(element);
         m_clientId = clientId;
@@ -356,6 +368,7 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
         getElement().setPropertyBoolean(PROP_WAS_MODEL_GROUP, wasModelGroup);
         getElement().setPropertyString(PROP_ELEMENT_OBJECT_ID, m_objectId);
         m_iconClasses = iconClasses;
+        m_reused = isReused;
     }
 
     /**
@@ -729,13 +742,18 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
                                     && !target.getTagName().equalsIgnoreCase("a")
                                     && (target != getElement())) {
                                     if (CmsContentEditor.isEditable(target)) {
-                                        CmsEditorBase.markForInlineFocus(target);
-                                        controller.getHandler().openEditorForElement(
-                                            CmsContainerPageElementPanel.this,
-                                            true,
-                                            isNew());
-                                        removeEditorHandler();
+                                        final Element finalTarget = target;
                                         event.cancel();
+                                        CmsContainerpageController.get().checkReuse(
+                                            CmsContainerPageElementPanel.this,
+                                            () -> {
+                                                CmsEditorBase.markForInlineFocus(finalTarget);
+                                                controller.getHandler().openEditorForElement(
+                                                    CmsContainerPageElementPanel.this,
+                                                    true,
+                                                    isNew());
+                                                removeEditorHandler();
+                                            });
                                         break;
                                     } else {
                                         target = target.getParentElement();
@@ -787,6 +805,16 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
     public boolean isNewEditorDisabled() {
 
         return m_disableNewEditor;
+    }
+
+    /**
+     * Checks if this element is marked as reused.
+     *
+     * @return true if the element is marked as reused
+     */
+    public boolean isReused() {
+
+        return m_reused;
     }
 
     /**
@@ -1040,7 +1068,7 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
         }
 
         m_checkingEditables = false;
-        resetNodeInsertedHandler();
+        initMutationObserver();
     }
 
     /**
@@ -1280,6 +1308,24 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
     }
 
     /**
+     * Initializes the mutation observer used for updating the edit buttons after DOM changes (e.g. pagination).
+     */
+    private void initMutationObserver() {
+
+        if (m_mutationObserver == null) {
+            MutationObserverCallbackFn callback = (JsArray<MutationRecord> records, MutationObserver obs) -> {
+                checkForEditableChanges();
+                return null;
+            };
+            m_mutationObserver = new MutationObserver(callback);
+            MutationObserverInit options = Js.cast(new JsObject());
+            options.setSubtree(true);
+            options.setChildList(true);
+            m_mutationObserver.observe(Js.cast(getElement()), options);
+        }
+    }
+
+    /**
      * Returns if the option bar position collides with any iframe child elements.<p>
      *
      * @param optionTop the option bar absolute top
@@ -1305,34 +1351,6 @@ implements I_CmsDraggable, HasClickHandlers, I_CmsInlineFormParent {
         }
         return false;
     }
-
-    /**
-     * Resets the node inserted handler.<p>
-     */
-    private native void resetNodeInsertedHandler()/*-{
-		var $this = this;
-		var element = $this.@org.opencms.ade.containerpage.client.ui.CmsContainerPageElementPanel::getElement()();
-		var handler = $this.@org.opencms.ade.containerpage.client.ui.CmsContainerPageElementPanel::m_nodeInsertHandler;
-		if (handler == null) {
-			handler = function(event) {
-				$this.@org.opencms.ade.containerpage.client.ui.CmsContainerPageElementPanel::checkForEditableChanges()();
-			};
-			$this.@org.opencms.ade.containerpage.client.ui.CmsContainerPageElementPanel::m_nodeInsertHandler = handler;
-		} else {
-			if (element.removeEventLister) {
-				element.removeEventListener("DOMNodeInserted", handler);
-			} else if (element.detachEvent) {
-				// IE specific
-				element.detachEvent("onDOMNodeInserted", handler);
-			}
-		}
-		if (element.addEventListener) {
-			element.addEventListener("DOMNodeInserted", handler, false);
-		} else if (element.attachEvent) {
-			// IE specific
-			element.attachEvent("onDOMNodeInserted", handler);
-		}
-    }-*/;
 
     /**
      * This method removes the option-bar widget from DOM and re-attaches it at it's original position.<p>

@@ -209,8 +209,14 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The "errorPage" attribute. */
     public static final String A_ERROR_PAGE = "errorPage";
 
+    /** The "id" attribute. */
+    public static final String A_ID = "id";
+
     /** The "exclusive" attribute. */
     public static final String A_EXCLUSIVE = "exclusive";
+
+    /** The "mailfrom" attribute. */
+    public static final String A_MAILFROM = "mailfrom";
 
     /** The attribute name for the localization mode. */
     public static final String A_LOCALIZATION_MODE = "localizationMode";
@@ -899,7 +905,7 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         digester.addSetNext("*/" + N_SYSTEM + "/" + N_MAIL, "setMailSettings");
 
         // add mail host configuration rule
-        digester.addCallMethod("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, "addMailHost", 7);
+        digester.addCallMethod("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, "addMailHost", 9);
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 0, A_NAME);
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 1, A_PORT);
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 2, A_ORDER);
@@ -907,6 +913,8 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 4, A_SECURITY);
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 5, A_USER);
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 6, A_PASSWORD);
+        digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 7, A_ID);
+        digester.addCallParam("*/" + N_SYSTEM + "/" + N_MAIL + "/" + N_MAILHOST, 8, A_MAILFROM);
 
         // add event classes
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_EVENTS + "/" + N_EVENTMANAGER, "addEventManager", 1);
@@ -1453,13 +1461,13 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         Iterator<CmsMailHost> hosts = m_mailSettings.getMailHosts().iterator();
         while (hosts.hasNext()) {
             CmsMailHost host = hosts.next();
-            Element hostElement = mailElement.addElement(N_MAILHOST).addAttribute(
+            Element hostElement = mailElement.addElement(N_MAILHOST).addAttribute(A_ID, host.getId()).addAttribute(
                 A_NAME,
                 host.getHostname()).addAttribute(A_PORT, Integer.toString(host.getPort())).addAttribute(
                     A_ORDER,
                     host.getOrder().toString()).addAttribute(A_PROTOCOL, host.getProtocol()).addAttribute(
                         A_SECURITY,
-                        host.getSecurity());
+                        host.getSecurity()).addAttribute(A_MAILFROM, host.getMailfrom());
             if (host.isAuthenticating()) {
                 hostElement.addAttribute(A_USER, host.getUsername()).addAttribute(A_PASSWORD, host.getPassword());
             }
@@ -1475,8 +1483,8 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         // version history
         Element historyElement = systemElement.addElement(N_VERSIONHISTORY);
         historyElement.addAttribute(A_ENABLED, String.valueOf(m_historyEnabled));
-        historyElement.addAttribute(A_COUNT, new Integer(m_historyVersions).toString());
-        historyElement.addAttribute(A_DELETED, new Integer(m_historyVersionsAfterDeletion).toString());
+        historyElement.addAttribute(A_COUNT, Integer.valueOf(m_historyVersions).toString());
+        historyElement.addAttribute(A_DELETED, Integer.valueOf(m_historyVersionsAfterDeletion).toString());
 
         // resourceinit
         Element resourceinitElement = systemElement.addElement(N_RESOURCEINIT);
@@ -2616,8 +2624,8 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
                 Messages.get().getBundle().key(
                     Messages.INIT_HISTORY_SETTINGS_3,
                     Boolean.valueOf(m_historyEnabled),
-                    new Integer(m_historyVersions),
-                    new Integer(m_historyVersionsAfterDeletion)));
+                    Integer.valueOf(m_historyVersions),
+                    Integer.valueOf(m_historyVersionsAfterDeletion)));
         }
     }
 
@@ -2705,9 +2713,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
             CmsLog.INIT.info(
                 Messages.get().getBundle().key(
                     Messages.INIT_LOGINMANAGER_3,
-                    new Integer(disableMinutes),
-                    new Integer(maxBadAttempts),
-                    new Boolean(enableSecurity)));
+                    Integer.valueOf(disableMinutes),
+                    Integer.valueOf(maxBadAttempts),
+                    Boolean.valueOf(enableSecurity)));
         }
     }
 
@@ -2746,9 +2754,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public void setNotificationTime(String notificationTime) {
 
         try {
-            m_notificationTime = new Integer(notificationTime);
+            m_notificationTime = Integer.valueOf(notificationTime);
         } catch (Throwable t) {
-            m_notificationTime = new Integer(-1);
+            m_notificationTime = Integer.valueOf(-1);
         }
         if (CmsLog.INIT.isInfoEnabled()) {
             CmsLog.INIT.info(Messages.get().getBundle().key(Messages.INIT_NOTIFICATION_TIME_1, m_notificationTime));
@@ -2936,7 +2944,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         }
         if (CmsLog.INIT.isInfoEnabled()) {
             CmsLog.INIT.info(
-                Messages.get().getBundle().key(Messages.INIT_TEMPFILE_PROJECT_ID_1, new Integer(m_tempFileProjectId)));
+                Messages.get().getBundle().key(
+                    Messages.INIT_TEMPFILE_PROJECT_ID_1,
+                    Integer.valueOf(m_tempFileProjectId)));
         }
     }
 

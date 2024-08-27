@@ -29,6 +29,7 @@ package org.opencms.ade.containerpage.shared;
 
 import org.opencms.gwt.shared.CmsAdditionalInfoBean;
 import org.opencms.gwt.shared.CmsGwtConstants;
+import org.opencms.gwt.shared.CmsListInfoBean;
 import org.opencms.gwt.shared.CmsTemplateContextInfo;
 import org.opencms.util.CmsStringUtil;
 import org.opencms.xml.content.CmsXmlContentProperty;
@@ -38,6 +39,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -49,6 +51,8 @@ public class CmsContainerElementData extends CmsContainerElement {
 
     /** The contents by container type. */
     private Map<String, String> m_contents;
+
+    private CmsListInfoBean m_listInfo;
 
     /** The group-container description. */
     private String m_description;
@@ -191,7 +195,7 @@ public class CmsContainerElementData extends CmsContainerElement {
                 keyOrId = getSettings().get(CmsFormatterConfig.getSettingsKeyForContainer(""));
             }
             CmsFormatterConfigCollection formattersForContainer = getFormatters().get(containerName);
-            if (keyOrId != null) {
+            if ((keyOrId != null) && (formattersForContainer != null)) {
                 formatterConfig = formattersForContainer.get(keyOrId);
                 if (formatterConfig == null) {
                     int separatorPos = keyOrId.lastIndexOf(CmsGwtConstants.FORMATTER_SUBKEY_SEPARATOR);
@@ -202,7 +206,13 @@ public class CmsContainerElementData extends CmsContainerElement {
                 }
             }
             if (formatterConfig == null) {
-                formatterConfig = getFormatters().get(containerName).getFirstFormatter();
+                if (getFormatters().containsKey(containerName)) {
+                    try {
+                        formatterConfig = getFormatters().get(containerName).getFirstFormatter();
+                    } catch (NoSuchElementException e) {
+                        // formatterConfig remains null
+                    }
+                }
             }
         }
         return formatterConfig;
@@ -260,6 +270,16 @@ public class CmsContainerElementData extends CmsContainerElement {
     public long getLastModifiedDate() {
 
         return m_lastModifiedDate;
+    }
+
+    /**
+     * Gets the list info bean.
+     *
+     * @return the list info bean
+     */
+    public CmsListInfoBean getListInfo() {
+
+        return m_listInfo;
     }
 
     /**
@@ -532,6 +552,16 @@ public class CmsContainerElementData extends CmsContainerElement {
     public void setLastModifiedDate(long lastModifiedDate) {
 
         m_lastModifiedDate = lastModifiedDate;
+    }
+
+    /**
+     * Sets the list info bean.
+     *
+     * @param listInfo the list info bean
+     */
+    public void setListInfo(CmsListInfoBean listInfo) {
+
+        m_listInfo = listInfo;
     }
 
     /**

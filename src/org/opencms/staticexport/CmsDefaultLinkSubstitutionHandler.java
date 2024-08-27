@@ -35,6 +35,7 @@ import org.opencms.file.CmsResourceFilter;
 import org.opencms.file.CmsVfsException;
 import org.opencms.file.CmsVfsResourceNotFoundException;
 import org.opencms.file.types.CmsResourceTypeImage;
+import org.opencms.file.types.I_CmsResourceType;
 import org.opencms.loader.CmsLoaderException;
 import org.opencms.main.CmsException;
 import org.opencms.main.CmsLog;
@@ -260,7 +261,7 @@ public class CmsDefaultLinkSubstitutionHandler implements I_CmsLinkSubstitutionH
             // (We really need the target site root in the cache key, because different resources with the same site paths
             // but in different sites may have different export settings. It seems we don't really need the site root
             // from the request context as part of the key, but we'll leave it in to make sure we don't break anything.)
-            String cacheKey = generateCacheKey(cms, targetSiteRoot, detailPagePart, absoluteLink);
+            String cacheKey = generateCacheKey(cms, siteRoot, targetSiteRoot, detailPagePart, absoluteLink);
             resultLink = exportManager.getCachedOnlineLink(cacheKey);
             if (resultLink == null) {
                 String storedSiteRoot = cms.getRequestContext().getSiteRoot();
@@ -430,6 +431,7 @@ public class CmsDefaultLinkSubstitutionHandler implements I_CmsLinkSubstitutionH
     /**
      * Generates the cache key for Online links.
      * @param cms the current CmsObject
+     * @param sourceSiteRoot the source site root (where the content linked to is located)
      * @param targetSiteRoot the target site root
      * @param detailPagePart the detail page part
      * @param absoluteLink the absolute (site-relative) link to the resource
@@ -437,6 +439,7 @@ public class CmsDefaultLinkSubstitutionHandler implements I_CmsLinkSubstitutionH
      */
     protected String generateCacheKey(
         CmsObject cms,
+        String sourceSiteRoot,
         String targetSiteRoot,
         String detailPagePart,
         String absoluteLink) {
@@ -445,6 +448,8 @@ public class CmsDefaultLinkSubstitutionHandler implements I_CmsLinkSubstitutionH
             + cms.getRequestContext().getCurrentUser().getId()
             + ":"
             + cms.getRequestContext().getSiteRoot()
+            + ":"
+            + sourceSiteRoot
             + ":"
             + targetSiteRoot
             + ":"
@@ -543,11 +548,11 @@ public class CmsDefaultLinkSubstitutionHandler implements I_CmsLinkSubstitutionH
         if (uri.isAbsolute()) {
             CmsSiteMatcher targetMatcher = new CmsSiteMatcher(targetUri);
             if (OpenCms.getSiteManager().isMatching(targetMatcher)
-                || targetMatcher.equals(cms.getRequestContext().getRequestMatcher())) {
+                || targetMatcher.equalsIgnoreScheme(cms.getRequestContext().getRequestMatcher())) {
 
                 path = CmsLinkManager.removeOpenCmsContext(path);
                 boolean isWorkplaceServer = OpenCms.getSiteManager().isWorkplaceRequest(targetMatcher)
-                    || targetMatcher.equals(cms.getRequestContext().getRequestMatcher());
+                    || targetMatcher.equalsIgnoreScheme(cms.getRequestContext().getRequestMatcher());
                 if (isWorkplaceServer) {
                     String selectedPath;
                     String targetSiteRoot = OpenCms.getSiteManager().getSiteRoot(path);
@@ -768,8 +773,12 @@ public class CmsDefaultLinkSubstitutionHandler implements I_CmsLinkSubstitutionH
             if (cms.getRequestContext().getAttribute(CmsDetailNameCache.ATTR_BYPASS) != null) {
                 detailId = cms.readIdForUrlName(name);
             } else {
-                detailId = OpenCms.getADEManager().getDetailIdCache(
-                    cms.getRequestContext().getCurrentProject().isOnlineProject()).getDetailId(name);
+                if (CmsUUID.isValidUUID(name)) {
+                    detailId = new CmsUUID(name);
+                } else {
+                    detailId = OpenCms.getADEManager().getDetailIdCache(
+                        cms.getRequestContext().getCurrentProject().isOnlineProject()).getDetailId(name);
+                }
             }
             if (detailId == null) {
                 return null;
@@ -785,6 +794,10 @@ public class CmsDefaultLinkSubstitutionHandler implements I_CmsLinkSubstitutionH
                 cms.getRequestContext().setSiteRoot(origSiteRoot);
             }
             CmsResource detailResource = cms.readResource(detailId, CmsResourceFilter.ALL);
+            I_CmsResourceType type = OpenCms.getResourceManager().getResourceType(detailResource);
+            if (!OpenCms.getADEManager().getDetailPageTypes(cms).contains(type.getTypeName())) {
+                return null;
+            }
             return detailResource.getRootPath() + getSuffix(uri);
         } catch (Exception e) {
             LOG.error(e.getLocalizedMessage(), e);

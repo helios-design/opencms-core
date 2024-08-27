@@ -29,13 +29,18 @@ package org.opencms.widgets;
 
 import org.opencms.file.CmsObject;
 import org.opencms.file.CmsResource;
+import org.opencms.gwt.shared.CmsGwtConstants;
 import org.opencms.i18n.CmsEncoder;
 import org.opencms.i18n.CmsMessages;
+import org.opencms.json.JSONObject;
+import org.opencms.main.CmsLog;
 import org.opencms.xml.content.I_CmsXmlContentHandler.DisplayType;
 import org.opencms.xml.types.A_CmsXmlContentValue;
 
 import java.util.List;
 import java.util.Locale;
+
+import org.apache.commons.logging.Log;
 
 /**
  * Provides a standard HTML form textarea widget, for use on a widget dialog.<p>
@@ -45,6 +50,9 @@ import java.util.Locale;
  * @since 6.0.0
  */
 public class CmsTextareaWidget extends A_CmsWidget implements I_CmsADEWidget {
+
+    /** Logger instance for this class. */
+    private static final Log LOG = CmsLog.getLog(CmsTextareaWidget.class);
 
     /** Default number of rows to display. */
     private static final int DEFAULT_ROWS_NUMBER = 4;
@@ -79,6 +87,22 @@ public class CmsTextareaWidget extends A_CmsWidget implements I_CmsADEWidget {
     }
 
     /**
+     * Converts locale to the necessary format for the Typograf library.
+     * @param contentLocale the locale
+     * @return the locale for Typograf
+     */
+    public static  String getTypografLocale(Locale contentLocale) {
+
+        String localeStr = contentLocale.toString();
+        if (contentLocale.getLanguage().equals("en")) {
+            localeStr = "en-US";
+        } else {
+            localeStr = contentLocale.getLanguage();
+        }
+        return localeStr;
+    }
+
+    /**
      * @see org.opencms.widgets.I_CmsADEWidget#getConfiguration(org.opencms.file.CmsObject, org.opencms.xml.types.A_CmsXmlContentValue, org.opencms.i18n.CmsMessages, org.opencms.file.CmsResource, java.util.Locale)
      */
     public String getConfiguration(
@@ -88,7 +112,16 @@ public class CmsTextareaWidget extends A_CmsWidget implements I_CmsADEWidget {
         CmsResource resource,
         Locale contentLocale) {
 
-        return getConfiguration();
+        JSONObject json = new JSONObject();
+        try {
+            json.put(CmsGwtConstants.JSON_TEXTAREA_CONFIG, getConfiguration());
+            String localeStr = getTypografLocale(contentLocale);
+            json.put(CmsGwtConstants.JSON_TEXTAREA_LOCALE, localeStr);
+        } catch (Exception e) {
+            LOG.error(e.getLocalizedMessage(), e);
+        }
+        String result = json.toString();
+        return result;
     }
 
     /**
@@ -116,7 +149,7 @@ public class CmsTextareaWidget extends A_CmsWidget implements I_CmsADEWidget {
         StringBuffer result = new StringBuffer(16);
         int rows = DEFAULT_ROWS_NUMBER;
         try {
-            rows = new Integer(getConfiguration()).intValue();
+            rows = Integer.valueOf(getConfiguration()).intValue();
         } catch (Exception e) {
             // ignore
         }

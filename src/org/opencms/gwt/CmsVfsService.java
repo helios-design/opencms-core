@@ -211,6 +211,63 @@ public class CmsVfsService extends CmsGwtService implements I_CmsVfsService {
     }
 
     /**
+     * Gets page information of a resource and adds it to the given list info bean.<p>
+     *
+     * @param cms the CMS context
+     * @param resource the resource
+     * @param listInfo the list info bean to add the information to
+     *
+     * @return the list info bean
+     *
+     * @throws CmsException if the resource info can not be read
+     */
+    public static CmsListInfoBean addPageInfo(CmsObject cms, CmsResource resource, CmsListInfoBean listInfo)
+    throws CmsException {
+
+        listInfo.setResourceState(resource.getState());
+
+        String title = cms.readPropertyObject(
+            resource,
+            CmsPropertyDefinition.PROPERTY_TITLE,
+            false,
+            OpenCms.getWorkplaceManager().getWorkplaceLocale(cms)).getValue();
+        if (CmsStringUtil.isNotEmptyOrWhitespaceOnly(title)) {
+            listInfo.setTitle(title);
+        } else {
+            listInfo.setTitle(resource.getName());
+        }
+        listInfo.setSubTitle(cms.getSitePath(resource));
+        listInfo.setIsFolder(Boolean.valueOf(resource.isFolder()));
+        String resTypeName = OpenCms.getResourceManager().getResourceType(resource).getTypeName();
+        CmsExplorerTypeSettings cmsExplorerTypeSettings = OpenCms.getWorkplaceManager().getExplorerTypeSetting(
+            resTypeName);
+        if (null == cmsExplorerTypeSettings) {
+            CmsMessageContainer errMsg = Messages.get().container(
+                Messages.ERR_EXPLORER_TYPE_SETTINGS_FOR_RESOURCE_TYPE_NOT_FOUND_3,
+                resource.getRootPath(),
+                resTypeName,
+                Integer.valueOf(resource.getTypeId()));
+            throw new CmsConfigurationException(errMsg);
+        }
+        String key = cmsExplorerTypeSettings.getKey();
+        Locale currentLocale = OpenCms.getWorkplaceManager().getWorkplaceLocale(cms);
+        CmsMessages messages = OpenCms.getWorkplaceManager().getMessages(currentLocale);
+        String resTypeNiceName = messages.key(key);
+        listInfo.addAdditionalInfo(
+            messages.key(org.opencms.workplace.commons.Messages.GUI_LABEL_TYPE_0),
+            resTypeNiceName);
+        listInfo.setResourceType(resTypeName);
+        listInfo.setBigIconClasses(
+            CmsIconUtil.getIconClasses(CmsIconUtil.getDisplayType(cms, resource), resource.getName(), false));
+        // set the default file and detail type info
+        String detailType = CmsResourceIcon.getDefaultFileOrDetailType(cms, resource);
+        if (detailType != null) {
+            listInfo.setSmallIconClasses(CmsIconUtil.getIconClasses(detailType, null, true));
+        }
+        return listInfo;
+    }
+
+    /**
      * Formats a date given the current user's workplace locale.<p>
      *
      * @param cms the current CMS context
@@ -312,63 +369,6 @@ public class CmsVfsService extends CmsGwtService implements I_CmsVfsService {
         resolver.addMacro("file", cms.getSitePath(res));
         String path = resolver.resolveMacros(pathWithMacros).replaceAll("/+", "/");
         return path;
-    }
-
-    /**
-     * Gets page information of a resource and adds it to the given list info bean.<p>
-     *
-     * @param cms the CMS context
-     * @param resource the resource
-     * @param listInfo the list info bean to add the information to
-     *
-     * @return the list info bean
-     *
-     * @throws CmsException if the resource info can not be read
-     */
-    protected static CmsListInfoBean addPageInfo(CmsObject cms, CmsResource resource, CmsListInfoBean listInfo)
-    throws CmsException {
-
-        listInfo.setResourceState(resource.getState());
-
-        String title = cms.readPropertyObject(
-            resource,
-            CmsPropertyDefinition.PROPERTY_TITLE,
-            false,
-            OpenCms.getWorkplaceManager().getWorkplaceLocale(cms)).getValue();
-        if (CmsStringUtil.isNotEmptyOrWhitespaceOnly(title)) {
-            listInfo.setTitle(title);
-        } else {
-            listInfo.setTitle(resource.getName());
-        }
-        listInfo.setSubTitle(cms.getSitePath(resource));
-        listInfo.setIsFolder(Boolean.valueOf(resource.isFolder()));
-        String resTypeName = OpenCms.getResourceManager().getResourceType(resource).getTypeName();
-        CmsExplorerTypeSettings cmsExplorerTypeSettings = OpenCms.getWorkplaceManager().getExplorerTypeSetting(
-            resTypeName);
-        if (null == cmsExplorerTypeSettings) {
-            CmsMessageContainer errMsg = Messages.get().container(
-                Messages.ERR_EXPLORER_TYPE_SETTINGS_FOR_RESOURCE_TYPE_NOT_FOUND_3,
-                resource.getRootPath(),
-                resTypeName,
-                Integer.valueOf(resource.getTypeId()));
-            throw new CmsConfigurationException(errMsg);
-        }
-        String key = cmsExplorerTypeSettings.getKey();
-        Locale currentLocale = OpenCms.getWorkplaceManager().getWorkplaceLocale(cms);
-        CmsMessages messages = OpenCms.getWorkplaceManager().getMessages(currentLocale);
-        String resTypeNiceName = messages.key(key);
-        listInfo.addAdditionalInfo(
-            messages.key(org.opencms.workplace.commons.Messages.GUI_LABEL_TYPE_0),
-            resTypeNiceName);
-        listInfo.setResourceType(resTypeName);
-        listInfo.setBigIconClasses(
-            CmsIconUtil.getIconClasses(CmsIconUtil.getDisplayType(cms, resource), resource.getName(), false));
-        // set the default file and detail type info
-        String detailType = CmsResourceIcon.getDefaultFileOrDetailType(cms, resource);
-        if (detailType != null) {
-            listInfo.setSmallIconClasses(CmsIconUtil.getIconClasses(detailType, null, true));
-        }
-        return listInfo;
     }
 
     /**
@@ -912,6 +912,23 @@ public class CmsVfsService extends CmsGwtService implements I_CmsVfsService {
             }
         }
         return null;
+    }
+
+    /**
+     * @see org.opencms.gwt.shared.rpc.I_CmsVfsService#getSitePath(org.opencms.util.CmsUUID)
+     */
+    public List<String> getSitePaths(List<CmsUUID> ids) {
+
+        List<String> result = new ArrayList<>();
+        for (CmsUUID id : ids) {
+            try {
+                CmsResource resource = getCmsObject().readResource(id, CmsResourceFilter.IGNORE_EXPIRATION);
+                result.add(getCmsObject().getSitePath(resource));
+            } catch (Exception e) {
+                LOG.debug(e.getLocalizedMessage(), e);
+            }
+        }
+        return result;
     }
 
     /**
@@ -1686,64 +1703,66 @@ public class CmsVfsService extends CmsGwtService implements I_CmsVfsService {
         } else if (OpenCms.getResourceManager().matchResourceType(
             CmsResourceTypeImage.getStaticTypeName(),
             resource.getTypeId())) {
-                CmsImageScaler scaler = new CmsImageScaler(cms, resource);
-                String imageLink = null;
-                if (resource instanceof I_CmsHistoryResource) {
-                    int version = ((I_CmsHistoryResource)resource).getVersion();
-                    imageLink = OpenCms.getLinkManager().substituteLinkForUnknownTarget(
-                        cms,
-                        CmsHistoryListUtil.getHistoryLink(cms, resource.getStructureId(), "" + version));
-                } else {
-                    imageLink = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, resource.getRootPath());
-                }
-                imageLink = CmsRequestUtil.appendParameter(imageLink, "random", "" + Math.random());
-                previewContent = "<img src=\"" + imageLink + "\" title=\"" + title + "\" style=\"display:block\" />";
-                height = scaler.getHeight();
-                width = scaler.getWidth();
-            } else if (isContainerOrXmlPage(resource)) {
-                String link = "";
-                if (resource instanceof I_CmsHistoryResource) {
-                    int version = ((I_CmsHistoryResource)resource).getVersion();
-                    link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(
-                        cms,
-                        CmsHistoryListUtil.getHistoryLink(cms, resource.getStructureId(), "" + version));
-                } else {
-                    link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, resource.getRootPath());
-                }
-                return new CmsPreviewInfo(null, link, true, null, cms.getSitePath(resource), locale.toString());
-            } else if (isBinary(resource)) {
-                String link = "";
-                if (resource instanceof I_CmsHistoryResource) {
-                    int version = ((I_CmsHistoryResource)resource).getVersion();
-                    link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(
-                        cms,
-                        CmsHistoryListUtil.getHistoryLink(cms, resource.getStructureId(), "" + version));
-                } else {
-                    link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, resource.getRootPath());
-                }
-                return new CmsPreviewInfo(null, link, true, null, cms.getSitePath(resource), locale.toString());
-            } else if (CmsResourceTypeXmlContent.isXmlContent(resource)) {
-                if (!locales.containsKey(locale.toString())) {
-                    locale = CmsLocaleManager.getMainLocale(cms, resource);
-                }
-                previewContent = CmsPreviewService.getPreviewContent(
-                    getRequest(),
-                    getResponse(),
+            CmsImageScaler scaler = new CmsImageScaler(cms, resource);
+            String imageLink = null;
+            if (resource instanceof I_CmsHistoryResource) {
+                int version = ((I_CmsHistoryResource)resource).getVersion();
+                imageLink = OpenCms.getLinkManager().substituteLinkForUnknownTarget(
                     cms,
-                    resource,
-                    locale);
-
-            } else if (CmsResourceTypePlain.getStaticTypeId() == resource.getTypeId()) {
-                try {
-                    previewContent = "<pre><code>" + new String(cms.readFile(resource).getContents()) + "</code></pre>";
-                } catch (CmsException e) {
-                    LOG.warn(e.getLocalizedMessage(), e);
-                    previewContent = "<div>"
-                        + Messages.get().getBundle(OpenCms.getWorkplaceManager().getWorkplaceLocale(cms)).key(
-                            Messages.GUI_NO_PREVIEW_CAN_T_READ_CONTENT_0)
-                        + "</div>";
-                }
+                    CmsHistoryListUtil.getHistoryLink(cms, resource.getStructureId(), "" + version));
+            } else {
+                imageLink = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, resource.getRootPath());
             }
+            imageLink = CmsRequestUtil.appendParameter(imageLink, "random", "" + Math.random());
+            previewContent = "<img src=\"" + imageLink + "\" title=\"" + title + "\" style=\"display:block\" />";
+            height = scaler.getHeight();
+            width = scaler.getWidth();
+        } else if (isContainerOrXmlPage(resource)) {
+            String link = "";
+            if (resource instanceof I_CmsHistoryResource) {
+                int version = ((I_CmsHistoryResource)resource).getVersion();
+                link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(
+                    cms,
+                    CmsHistoryListUtil.getHistoryLink(cms, resource.getStructureId(), "" + version));
+            } else if (resource.getRootPath().contains(CmsDetailOnlyContainerUtil.DETAIL_CONTAINERS_FOLDER_NAME)) {
+                String detailContentPath = cms.getRequestContext().removeSiteRoot(CmsDetailOnlyContainerUtil.getDetailContentPath(resource.getRootPath()));
+                if (cms.existsResource(detailContentPath, CmsResourceFilter.IGNORE_EXPIRATION)) {
+                    link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, detailContentPath);
+                } else {
+                    link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, resource.getRootPath());
+                }
+            } else {
+                link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, resource.getRootPath());
+            }
+            return new CmsPreviewInfo(null, link, true, null, cms.getSitePath(resource), locale.toString());
+        } else if (isBinary(resource)) {
+            String link = "";
+            if (resource instanceof I_CmsHistoryResource) {
+                int version = ((I_CmsHistoryResource)resource).getVersion();
+                link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(
+                    cms,
+                    CmsHistoryListUtil.getHistoryLink(cms, resource.getStructureId(), "" + version));
+            } else {
+                link = OpenCms.getLinkManager().substituteLinkForUnknownTarget(cms, resource.getRootPath());
+            }
+            return new CmsPreviewInfo(null, link, true, null, cms.getSitePath(resource), locale.toString());
+        } else if (CmsResourceTypeXmlContent.isXmlContent(resource)) {
+            if (!locales.containsKey(locale.toString())) {
+                locale = CmsLocaleManager.getMainLocale(cms, resource);
+            }
+            previewContent = CmsPreviewService.getPreviewContent(getRequest(), getResponse(), cms, resource, locale);
+
+        } else if (CmsResourceTypePlain.getStaticTypeId() == resource.getTypeId()) {
+            try {
+                previewContent = "<pre><code>" + new String(cms.readFile(resource).getContents()) + "</code></pre>";
+            } catch (CmsException e) {
+                LOG.warn(e.getLocalizedMessage(), e);
+                previewContent = "<div>"
+                    + Messages.get().getBundle(OpenCms.getWorkplaceManager().getWorkplaceLocale(cms)).key(
+                        Messages.GUI_NO_PREVIEW_CAN_T_READ_CONTENT_0)
+                    + "</div>";
+            }
+        }
         if (CmsStringUtil.isNotEmptyOrWhitespaceOnly(previewContent)) {
             CmsPreviewInfo result = new CmsPreviewInfo(
                 previewContent,

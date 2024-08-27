@@ -43,6 +43,7 @@ import org.opencms.file.CmsResourceBuilder;
 import org.opencms.file.CmsResourceFilter;
 import org.opencms.file.CmsUser;
 import org.opencms.file.CmsVfsResourceNotFoundException;
+import org.opencms.file.types.CmsResourceTypeFolder;
 import org.opencms.file.types.CmsResourceTypePlain;
 import org.opencms.file.types.CmsResourceTypeXmlAdeConfiguration;
 import org.opencms.file.types.CmsResourceTypeXmlContainerPage;
@@ -588,6 +589,9 @@ public class CmsImportVersion10 implements I_CmsImport {
     /** True if the resource id has not been set. */
     private boolean m_resourceIdWasNull;
 
+    /** Flag which indicates whether the resource type name from the manifest was not found. */
+    private boolean m_unknownType;
+
     /**
      * Public constructor.<p>
      */
@@ -935,6 +939,7 @@ public class CmsImportVersion10 implements I_CmsImport {
                 m_relationsForResource = new ArrayList<>();
                 m_hasStructureId = false;
                 m_hasDateLastModified = false;
+                m_unknownType = false;
             }
         });
 
@@ -1965,7 +1970,7 @@ public class CmsImportVersion10 implements I_CmsImport {
                     Messages.get().container(
                         Messages.RPT_IMPORTING_RELATIONS_FOR_2,
                         src.getRootPath(),
-                        new Integer(m_relationData.keySet().size())),
+                        Integer.valueOf(m_relationData.keySet().size())),
                     I_CmsReport.FORMAT_NOTE);
                 getReport().print(org.opencms.report.Messages.get().container(org.opencms.report.Messages.RPT_DOTS_0));
                 boolean withErrors = false;
@@ -2054,10 +2059,15 @@ public class CmsImportVersion10 implements I_CmsImport {
             String translatedName = getRequestContext().addSiteRoot(
                 CmsStringUtil.joinPaths(m_parameters.getDestinationPath(), m_destination));
 
-            boolean resourceImmutable = checkImmutable(translatedName);
+            boolean skipResource = checkImmutable(translatedName);
             translatedName = getRequestContext().removeSiteRoot(translatedName);
             // if the resource is not immutable and not on the exclude list, import it
-            if (!resourceImmutable) {
+            if (!skipResource) {
+                if (!m_hasStructureId && isFolderType(m_typeName) && getCms().existsResource(translatedName, CmsResourceFilter.ALL)) {
+                    skipResource = true;
+                }
+            }
+            if (!skipResource) {
                 // print out the information to the report
                 getReport().print(Messages.get().container(Messages.RPT_IMPORTING_0), I_CmsReport.FORMAT_NOTE);
                 getReport().print(
@@ -3064,6 +3074,7 @@ public class CmsImportVersion10 implements I_CmsImport {
             try {
                 m_resourceBuilder.setType(OpenCms.getResourceManager().getResourceType(typeName));
             } catch (@SuppressWarnings("unused") CmsLoaderException e) {
+                m_unknownType = true;
                 // TODO: what happens if the resource type is a specialized folder and is not configured??
                 try {
                     m_resourceBuilder.setType(
@@ -3581,6 +3592,23 @@ public class CmsImportVersion10 implements I_CmsImport {
     }
 
     /**
+     * Checks if the given type name refers to a folder type.
+     *
+     * @param typeName the type name
+     * @return the type name
+     */
+    protected boolean isFolderType(String typeName) {
+        if (OpenCms.getResourceManager().hasResourceType(typeName)) {
+            try {
+                return OpenCms.getResourceManager().getResourceType(typeName).isFolder();
+            } catch (CmsLoaderException e) {
+                LOG.error(e.getLocalizedMessage(), e);
+            }
+        }
+        return false;
+    }
+
+    /**
      * Fills the unset fields for an imported resource with default values.<p>
      *
      * @throws CmsImportExportException if something goes wrong
@@ -3591,6 +3619,20 @@ public class CmsImportVersion10 implements I_CmsImport {
         if (m_resourceBuilder.getStructureId() == null) {
             // if null generate a new structure id
             m_resourceBuilder.setStructureId(new CmsUUID());
+        }
+
+        if ((m_resourceBuilder.getResourceId() == null) && m_unknownType) {
+            try {
+                m_resourceBuilder.setType(OpenCms.getResourceManager().getResourceType(CmsResourceTypeFolder.getStaticTypeName()));
+            } catch (CmsLoaderException e) {
+                LOG.error(e.getLocalizedMessage(), e);
+            }
+        }
+        if (m_resourceBuilder.getType().isFolder()) {
+            // ensure folders end with a "/"
+            if (!CmsResource.isFolder(m_destination)) {
+                m_destination += "/";
+            }
         }
 
         // get UUIDs for the resource

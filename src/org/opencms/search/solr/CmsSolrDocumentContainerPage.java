@@ -152,6 +152,13 @@ public class CmsSolrDocumentContainerPage extends CmsSolrDocumentXmlContent {
                                         shouldExtractElement = formatter.isSearchContent();
                                     }
                                 }
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.debug(
+                                        "Should extract element "
+                                            + element.getResource().getRootPath()
+                                            + ": "
+                                            + shouldExtractElement);
+                                }
                                 if (shouldExtractElement) {
                                     all.add(
                                         CmsSolrDocumentXmlContent.extractXmlContent(
@@ -206,12 +213,4 @@ public class CmsSolrDocumentContainerPage extends CmsSolrDocumentXmlContent {
         return true;
     }
 
-    /**
-     * @see org.opencms.search.documents.I_CmsDocumentFactory#isUsingCache()
-     */
-    @Override
-    public boolean isUsingCache() {
-
-        return true;
-    }
 }

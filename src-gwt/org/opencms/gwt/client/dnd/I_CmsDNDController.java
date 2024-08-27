@@ -113,4 +113,28 @@ public interface I_CmsDNDController {
      * @param handler the drag and drop handler instance
      */
     void onTargetLeave(I_CmsDraggable draggable, I_CmsDropTarget target, CmsDNDHandler handler);
+
+    /**
+     * Called after the CSS styles are changed back to normal after a DnD operation.
+     *
+     * @param draggable the draggable
+     * @param target the drag target (null if drag cancelled)
+     */
+    default void postClear(I_CmsDraggable draggable, I_CmsDropTarget target) {
+
+        // do nothing
+    }
+
+    /**
+     * Maybe starts placement mode, and returns true if it does so.
+     *
+     * @param draggable the item for which placement mode should be activated
+     * @param handler the DnD handler
+     * @return true if placement mode has been activated
+     */
+    default boolean startPlacementMode(I_CmsDraggable draggable, CmsDNDHandler handler) {
+
+        return false;
+    }
+
 }

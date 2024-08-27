@@ -102,6 +102,7 @@ public interface I_CmsLayoutBundle extends ClientBundle {
     }
 
     /** Button CSS. */
+    @Shared
     @ImportedWithPrefix("buttons")
     interface I_CmsButtonCss extends I_CmsStateCss {
 
@@ -1061,6 +1062,13 @@ public interface I_CmsLayoutBundle extends ClientBundle {
          * @return the CSS class name
          */
         String highlightBox();
+
+        /**
+         * Access method.<p>
+         *
+         * @return the CSS class name
+         */
+        String midpointSeparator();
     }
 
     /** Link warning panel CSS. */
@@ -2256,6 +2264,8 @@ public interface I_CmsLayoutBundle extends ClientBundle {
          * @return the CSS class name
          */
         String toolbarLogo();
+
+        String toolbarPlacementMode();
 
         /**
          * Access method.<p>

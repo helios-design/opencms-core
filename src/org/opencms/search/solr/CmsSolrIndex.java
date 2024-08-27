@@ -884,6 +884,14 @@ public class CmsSolrIndex extends CmsSearchIndex {
             query.addFilterQuery(fqSearchExclude);
         }
 
+        if (CmsProject.ONLINE_PROJECT_NAME.equals(getProject())) {
+            query.addFilterQuery(
+                "-"
+                    + CmsPropertyDefinition.PROPERTY_SEARCH_EXCLUDE_ONLINE
+                    + CmsSearchField.FIELD_DYNAMIC_PROPERTIES
+                    + ":\"true\"");
+        }
+
         // get start parameter from the request
         int start = null == query.getStart() ? 0 : query.getStart().intValue();
 
@@ -1165,7 +1173,9 @@ public class CmsSolrIndex extends CmsSearchIndex {
 
             // adjust start, max score and hit count displayed in the result list.
             solrDocumentList.setStart(start);
-            Float finalMaxScore = sortByScoreDesc ? new Float(maxScore) : checkQueryResponse.getResults().getMaxScore();
+            Float finalMaxScore = sortByScoreDesc
+            ? Float.valueOf(maxScore)
+            : checkQueryResponse.getResults().getMaxScore();
             solrDocumentList.setMaxScore(finalMaxScore);
             solrDocumentList.setNumFound(visibleHitCount);
 
@@ -1182,9 +1192,9 @@ public class CmsSolrIndex extends CmsSearchIndex {
                 solrDocumentList);
 
             // Fill in the time, the overall query took, including processing and permission check.
-            checkQueryResponse.getResponseHeader().setVal(
+            ((NamedList<Object>)checkQueryResponse.getResponseHeader()).setVal(
                 checkQueryResponse.getResponseHeader().indexOf(QUERY_TIME_NAME, 0),
-                new Integer(new Long(System.currentTimeMillis() - startTime).intValue()));
+                Integer.valueOf(Long.valueOf(System.currentTimeMillis() - startTime).intValue()));
 
             // Fill in the highlighting information from the result query.
             if (query.getHighlight()) {
@@ -1207,7 +1217,7 @@ public class CmsSolrIndex extends CmsSearchIndex {
                 solrDocumentList,
                 resourceDocumentList,
                 start,
-                new Integer(rows),
+                Integer.valueOf(rows),
                 Math.min(end, (start + solrDocumentList.size())),
                 rows > 0 ? (start / rows) + 1 : 0, //page - but matches only in case of equally sized pages and is zero for rows=0 (because this was this way before!?!)
                 visibleHitCount,
@@ -1216,11 +1226,11 @@ public class CmsSolrIndex extends CmsSearchIndex {
                 System.currentTimeMillis());
             if (LOG.isDebugEnabled()) {
                 Object[] logParams = new Object[] {
-                    new Long(System.currentTimeMillis() - startTime),
-                    new Long(result.getNumFound()),
-                    new Long(solrPermissionTime + solrResultTime),
-                    new Long(processTime),
-                    new Long(result.getHighlightEndTime() != 0 ? result.getHighlightEndTime() - startTime : 0)};
+                    Long.valueOf(System.currentTimeMillis() - startTime),
+                    Long.valueOf(result.getNumFound()),
+                    Long.valueOf(solrPermissionTime + solrResultTime),
+                    Long.valueOf(processTime),
+                    Long.valueOf(result.getHighlightEndTime() != 0 ? result.getHighlightEndTime() - startTime : 0)};
                 LOG.debug(
                     query.toString()
                         + "\n"

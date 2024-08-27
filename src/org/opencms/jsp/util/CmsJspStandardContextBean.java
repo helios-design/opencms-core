@@ -78,6 +78,8 @@ import org.opencms.relations.CmsCategory;
 import org.opencms.relations.CmsCategoryService;
 import org.opencms.search.galleries.CmsGalleryNameMacroResolver;
 import org.opencms.site.CmsSite;
+import org.opencms.site.CmsSiteMatcher;
+import org.opencms.staticexport.CmsLinkManager;
 import org.opencms.ui.CmsVaadinUtils;
 import org.opencms.ui.apps.A_CmsWorkplaceApp;
 import org.opencms.ui.apps.CmsEditor;
@@ -90,6 +92,7 @@ import org.opencms.util.CmsStringUtil;
 import org.opencms.util.CmsUUID;
 import org.opencms.workplace.galleries.CmsAjaxDownloadGallery;
 import org.opencms.workplace.galleries.CmsAjaxImageGallery;
+import org.opencms.xml.CmsXmlContentDefinition;
 import org.opencms.xml.containerpage.CmsADESessionCache;
 import org.opencms.xml.containerpage.CmsContainerBean;
 import org.opencms.xml.containerpage.CmsContainerElementBean;
@@ -109,6 +112,8 @@ import org.opencms.xml.types.I_CmsXmlContentValue;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1551,6 +1556,36 @@ public final class CmsJspStandardContextBean {
     }
 
     /**
+     * Gets a lazy map which can be used to access element setting defaults for a specific formatter key and setting name.
+     *
+     * @return the lazy map
+     */
+    public Map<String, Map<String, CmsJspObjectValueWrapper>> getFormatterSettingDefault() {
+
+        return CmsCollectionsGenericWrapper.createLazyMap(input -> {
+            String formatterKey = (String)input;
+            I_CmsFormatterBean formatter = m_config.findFormatter(formatterKey);
+            if (formatter == null) {
+                return CmsCollectionsGenericWrapper.createLazyMap(input2 -> {
+                    return CmsJspObjectValueWrapper.NULL_VALUE_WRAPPER;
+                });
+            } else {
+                final Map<String, CmsXmlContentProperty> settingDefs = formatter.getSettings(m_config);
+                return CmsCollectionsGenericWrapper.createLazyMap(input2 -> {
+                    String settingName = (String)input2;
+                    CmsXmlContentProperty settingDef = settingDefs.get(settingName);
+                    if (settingDef == null) {
+                        return CmsJspObjectValueWrapper.NULL_VALUE_WRAPPER;
+                    } else {
+                        String settingDefault = settingDef.getDefault();
+                        return CmsJspObjectValueWrapper.createWrapper(m_cms, settingDefault);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
      * Returns a lazy initialized Map which allows access to the dynamic function beans using the JSP EL.<p>
      *
      * When given a key, the returned map will look up the corresponding dynamic function bean in the module configuration.<p>
@@ -2237,6 +2272,28 @@ public final class CmsJspStandardContextBean {
     }
 
     /**
+     * Gets the schema information bean for the given type or XSD.
+     *
+     * @param typeOrXsd either the name of a resource type, or the VFS path to an XSD schema
+     * @return the schema information bean
+     *
+     * @throws CmsException if something goes wrong
+     */
+    public CmsSchemaInfo getSchemaInfo(String typeOrXsd) throws CmsException {
+
+        CmsXmlContentDefinition contentDef = null;
+        if (OpenCms.getResourceManager().hasResourceType(typeOrXsd)) {
+            contentDef = CmsXmlContentDefinition.getContentDefinitionForType(m_cms, typeOrXsd);
+        } else if (typeOrXsd.startsWith("/")) {
+            contentDef = CmsXmlContentDefinition.unmarshal(m_cms, typeOrXsd);
+        } else {
+            throw new IllegalArgumentException("Invalid getSchemaInfo argument: " + typeOrXsd);
+        }
+        CmsSchemaInfo info = new CmsSchemaInfo(m_cms, contentDef);
+        return info;
+    }
+
+    /**
      * Returns the current site.<p>
      *
      * @return the current site
@@ -2512,6 +2569,48 @@ public final class CmsJspStandardContextBean {
     public boolean isForceDisableEditMode() {
 
         return m_forceDisableEditMode;
+    }
+
+    /**
+     * Checks if the link is a link to a path in a different OpenCms site from the current one.
+     *
+     * @param link the link to check
+     * @return true if the link is a link to different subsite
+     */
+    public boolean isLinkToDifferentSite(String link) {
+
+        CmsObject cms = getControllerCms();
+        try {
+            URI uri = new URI(link);
+            if (uri.getScheme() != null) {
+                String sitePart = uri.getScheme() + "://" + uri.getAuthority();
+                CmsSiteMatcher matcher = new CmsSiteMatcher(sitePart);
+                CmsSite site = OpenCms.getSiteManager().matchSite(matcher);
+                return ((site != null) && !site.getSiteRoot().equals(cms.getRequestContext().getSiteRoot()));
+            } else {
+                return false;
+            }
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Checks if the link is a link to a path in a different OpenCms subsite from the current one.
+     *
+     * <p>For detail links, this checks the subsite of the detail page, not the subsite of the detail content.
+     *
+     * @param link the link to check
+     * @return true if the link is a link to different site
+     */
+    public boolean isLinkToDifferentSubSite(String link) {
+
+        CmsObject cms = getControllerCms();
+        String subSite = CmsLinkManager.getLinkSubsite(cms, link);
+        String currentRootPath = cms.getRequestContext().addSiteRoot(cms.getRequestContext().getUri());
+        boolean result = (subSite != null)
+            && !subSite.equals(OpenCms.getADEManager().getSubSiteRoot(cms, currentRootPath));
+        return result;
     }
 
     /**
@@ -3117,20 +3216,22 @@ public final class CmsJspStandardContextBean {
                 CmsResourceFilter filter = getIsEditMode()
                 ? CmsResourceFilter.IGNORE_EXPIRATION
                 : CmsResourceFilter.DEFAULT;
-                for (CmsContainerBean container : m_page.getContainers().values()) {
-                    for (CmsContainerElementBean element : container.getElements()) {
-                        String settingsKey = CmsFormatterConfig.getSettingsKeyForContainer(container.getName());
-                        String formatterConfigId = element.getSettings() != null
-                        ? element.getSettings().get(settingsKey)
-                        : null;
-                        I_CmsFormatterBean formatterBean = null;
-                        formatterBean = m_config.findFormatter(formatterConfigId);
-                        if ((formatterBean != null)
-                            && formatterBean.useMetaMappingsForNormalElements()
-                            && m_cms.existsResource(element.getId(), filter)) {
-                            addMappingsForFormatter(formatterBean, element.getId(), resolver, false);
-                        }
+                if (m_page != null) {
+                    for (CmsContainerBean container : m_page.getContainers().values()) {
+                        for (CmsContainerElementBean element : container.getElements()) {
+                            String settingsKey = CmsFormatterConfig.getSettingsKeyForContainer(container.getName());
+                            String formatterConfigId = element.getSettings() != null
+                            ? element.getSettings().get(settingsKey)
+                            : null;
+                            I_CmsFormatterBean formatterBean = null;
+                            formatterBean = m_config.findFormatter(formatterConfigId);
+                            if ((formatterBean != null)
+                                && formatterBean.useMetaMappingsForNormalElements()
+                                && m_cms.existsResource(element.getId(), filter)) {
+                                addMappingsForFormatter(formatterBean, element.getId(), resolver, false);
+                            }
 
+                        }
                     }
                 }
                 if (getDetailContentId() != null) {

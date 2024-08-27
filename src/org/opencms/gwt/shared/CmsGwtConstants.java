@@ -128,6 +128,9 @@ public final class CmsGwtConstants {
 
     public static final String ATTR_DATA_LISTADD = "data-oc-listadd";
 
+    /** Marker attribute for dead links. */
+    public static final String ATTR_DEAD_LINK_MARKER = "data-oc-broken-link";
+
     /** Key for the element id attribute. */
     public static final String ATTR_ELEMENT_ID = "ATTR_ELEMENT_ID";
 
@@ -207,6 +210,18 @@ public final class CmsGwtConstants {
     /** Id of the element ussed to  display the sitemap header from Vaadin code. */
     public static final String ID_LOCALE_HEADER_CONTAINER = "locale-header-container";
 
+    /** Json field name for typograf locale passed to input widget. */
+    public static final String JSON_INPUT_LOCALE = "locale";
+
+    /** Json field name for enabling typograf, passed to input widget. */
+    public static final String JSON_INPUT_TYPOGRAF = "typograf";
+
+    /** Field name for the internal textarea configuration. */
+    public static final String JSON_TEXTAREA_CONFIG = "config";
+
+    /** Field name for the internal textarea configuration. */
+    public static final String JSON_TEXTAREA_LOCALE = "locale";
+
     /**
      * Session storage key for memorizing the last opened container page.
      */
@@ -250,6 +265,9 @@ public final class CmsGwtConstants {
 
     /** Tab id for the preference dialog. */
     public static final String TAB_HIDDEN = "hidden";
+
+    /** Tag name for the edit button bars injected into the page HTML in the container page editor. */
+    public static final String TAG_OC_EDITPOINT = "oc-editpoint";
 
     /** Action placeholder for the template contexts menu option. */
     public static final String TEMPLATECONTEXT_MENU_PLACEHOLDER = "templatecontexts";

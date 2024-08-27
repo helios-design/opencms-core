@@ -184,7 +184,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(byte data) {
 
-        return new Byte(data).toString();
+        return Byte.valueOf(data).toString();
     }
 
     /**
@@ -196,7 +196,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(char data) {
 
-        return new Character(data).toString();
+        return Character.valueOf(data).toString();
     }
 
     /**
@@ -208,7 +208,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(Date data) {
 
-        return new Long(data.getTime()).toString();
+        return Long.valueOf(data.getTime()).toString();
     }
 
     /**
@@ -220,7 +220,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(double data) {
 
-        return new Double(data).toString();
+        return Double.valueOf(data).toString();
     }
 
     /**
@@ -232,7 +232,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(float data) {
 
-        return new Float(data).toString();
+        return Float.valueOf(data).toString();
     }
 
     /**
@@ -244,7 +244,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(int data) {
 
-        return new Integer(data).toString();
+        return Integer.valueOf(data).toString();
     }
 
     /**
@@ -256,7 +256,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(long data) {
 
-        return new Long(data).toString();
+        return Long.valueOf(data).toString();
     }
 
     /**
@@ -287,7 +287,7 @@ public final class CmsDataTypeUtil {
      */
     public static String format(short data) {
 
-        return new Short(data).toString();
+        return Short.valueOf(data).toString();
     }
 
     /**
@@ -402,7 +402,7 @@ public final class CmsDataTypeUtil {
      */
     public static Byte parseByte(String data) {
 
-        return new Byte(data);
+        return Byte.valueOf(data);
     }
 
     /**
@@ -414,7 +414,7 @@ public final class CmsDataTypeUtil {
      */
     public static Character parseChar(String data) {
 
-        return new Character(data.charAt(0));
+        return Character.valueOf(data.charAt(0));
     }
 
     /**
@@ -438,7 +438,7 @@ public final class CmsDataTypeUtil {
      */
     public static Double parseDouble(String data) {
 
-        return new Double(data);
+        return Double.valueOf(data);
     }
 
     /**
@@ -450,7 +450,7 @@ public final class CmsDataTypeUtil {
      */
     public static Float parseFloat(String data) {
 
-        return new Float(data);
+        return Float.valueOf(data);
     }
 
     /**
@@ -462,7 +462,7 @@ public final class CmsDataTypeUtil {
      */
     public static Integer parseInt(String data) {
 
-        return new Integer(data);
+        return Integer.valueOf(data);
     }
 
     /**
@@ -474,7 +474,7 @@ public final class CmsDataTypeUtil {
      */
     public static Long parseLong(String data) {
 
-        return new Long(data);
+        return Long.valueOf(data);
     }
 
     /**
@@ -486,7 +486,7 @@ public final class CmsDataTypeUtil {
      */
     public static Short parseShort(String data) {
 
-        return new Short(data);
+        return Short.valueOf(data);
     }
 
     /**

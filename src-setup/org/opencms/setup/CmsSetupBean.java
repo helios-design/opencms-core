@@ -571,19 +571,6 @@ public class CmsSetupBean implements I_CmsShellCommands {
     }
 
     /**
-     * Returns the URI of a database config page (in step 3) for a specified database key.<p>
-     *
-     * @param key the database key (e.g. "mysql", "generic" or "oracle")
-     * @return the URI of a database config page
-     */
-    public String getDatabaseConfigPage(String key) {
-
-        // don't use File.separatorChar here, result must be a valid URL with "/" path delimiters
-        String configUri = FOLDER_DATABASE + key + "/" + "step_4_database_setup.jsp";
-        return CmsStringUtil.substitute(configUri, File.separator, "/");
-    }
-
-    /**
      * Returns a list of needed jar filenames for a database server setup specified by a database key (e.g. "mysql", "generic" or "oracle").<p>
      *
      * @param databaseKey a database key (e.g. "mysql", "generic" or "oracle")
@@ -1076,7 +1063,7 @@ public class CmsSetupBean implements I_CmsShellCommands {
             SortedMap<Integer, String> mappedDatabases = new TreeMap<Integer, String>();
             for (int i = 0; i < databases.size(); i++) {
                 String key = databases.get(i);
-                Integer ranking = new Integer(0);
+                Integer ranking = Integer.valueOf(0);
                 try {
                     ranking = Integer.valueOf(getDbProperty(key + ".ranking"));
                 } catch (Exception e) {

@@ -33,6 +33,7 @@ import org.opencms.ade.containerpage.client.ui.CmsContainerPageContainer;
 import org.opencms.ade.containerpage.client.ui.CmsContainerPageElementPanel;
 import org.opencms.ade.containerpage.client.ui.CmsGroupContainerElementPanel;
 import org.opencms.ade.containerpage.client.ui.CmsRemovedElementDeletionDialog;
+import org.opencms.ade.containerpage.client.ui.CmsReuseInfoDialog;
 import org.opencms.ade.containerpage.client.ui.CmsSmallElementsHandler;
 import org.opencms.ade.containerpage.client.ui.I_CmsDropContainer;
 import org.opencms.ade.containerpage.client.ui.css.I_CmsLayoutBundle;
@@ -54,6 +55,7 @@ import org.opencms.ade.containerpage.shared.CmsGroupContainer;
 import org.opencms.ade.containerpage.shared.CmsGroupContainerSaveResult;
 import org.opencms.ade.containerpage.shared.CmsInheritanceContainer;
 import org.opencms.ade.containerpage.shared.CmsRemovedElementStatus;
+import org.opencms.ade.containerpage.shared.CmsReuseInfo;
 import org.opencms.ade.containerpage.shared.rpc.I_CmsContainerpageService;
 import org.opencms.ade.containerpage.shared.rpc.I_CmsContainerpageServiceAsync;
 import org.opencms.ade.contenteditor.client.CmsContentEditor;
@@ -75,6 +77,7 @@ import org.opencms.gwt.shared.CmsContextMenuEntryBean;
 import org.opencms.gwt.shared.CmsCoreData.AdeContext;
 import org.opencms.gwt.shared.CmsGalleryContainerInfo;
 import org.opencms.gwt.shared.CmsGwtConstants;
+import org.opencms.gwt.shared.CmsGwtLog;
 import org.opencms.gwt.shared.CmsListInfoBean;
 import org.opencms.gwt.shared.CmsTemplateContextInfo;
 import org.opencms.gwt.shared.I_CmsAutoBeanFactory;
@@ -120,8 +123,16 @@ import com.google.gwt.user.client.ui.Widget;
 import com.google.web.bindery.autobean.shared.AutoBean;
 import com.google.web.bindery.autobean.shared.AutoBeanCodex;
 
+import elemental2.core.JsObject;
+import elemental2.dom.CustomEvent;
+import elemental2.dom.CustomEventInit;
 import elemental2.dom.DomGlobal;
 import elemental2.webstorage.WebStorageWindow;
+import jsinterop.annotations.JsPackage;
+import jsinterop.annotations.JsProperty;
+import jsinterop.annotations.JsType;
+import jsinterop.base.Js;
+import jsinterop.base.JsPropertyMap;
 
 /**
  * Data provider for the container-page editor. All data concerning the container-page is requested and maintained by this provider.<p>
@@ -142,6 +153,93 @@ public final class CmsContainerpageController {
 
         /** Element is just removed, no checks are performed. */
         silent;
+    }
+
+    /**
+     * Wrapper for the event details object for custom page editor events.
+     */
+    @JsType(isNative = true, namespace = JsPackage.GLOBAL, name = "?")
+    public interface I_EventDetails {
+
+        /**
+         * Gets the HTML element for the container itself.
+         *
+         * @return the HTML element for the container
+         */
+        @JsProperty
+        elemental2.dom.Element getContainer();
+
+        /**
+         * Gets the HTML element for the page element.
+         *
+         * @return the HTML element for the page element
+         */
+        @JsProperty
+        elemental2.dom.Element getElement();
+
+        /**
+         * The 'placeholder' state of the element.
+         *
+         * @return the 'placedholder' state
+         */
+        @JsProperty
+        boolean getIsPlaceholder();
+
+        /**
+         * Gets the replaced element.
+         *
+         * @return the replaced element
+         */
+        @JsProperty
+        elemental2.dom.Element getReplacedElement();
+
+        /**
+         * Gets the type.
+         *
+         * @return the type
+         */
+        @JsProperty
+        String getType();
+
+        /**
+         * Sets the HTML element for the container.
+         *
+         * @param container the HTML element for the container
+         */
+        @JsProperty
+        void setContainer(elemental2.dom.Element container);
+
+        /**
+         * Sets the HTML element for the page element.
+         * @param element the HTML element for the page element
+         */
+        @JsProperty
+        void setElement(elemental2.dom.Element element);
+
+        /**
+         * Sets the 'placeholder' (i.e. 'new') state
+         *
+         * @param isPlaceholder true if the element was new
+         */
+        @JsProperty
+        void setIsPlaceholder(boolean isPlaceholder);
+
+        /**
+         * Sets the replaced element.
+         *
+         * @param element the replaced element
+         */
+        @JsProperty
+        void setReplacedElement(elemental2.dom.Element element);
+
+        /**
+         * Sets the type.
+         *
+         * @param type the type
+         */
+        @JsProperty
+        void setType(String type);
+
     }
 
     /**
@@ -172,6 +270,25 @@ public final class CmsContainerpageController {
          * @param element the container element
          */
         void handleElement(CmsContainerPageElementPanel element);
+    }
+
+    /**
+     * Interface for classes that should be notified when container page elements are reloaded.
+     */
+    public interface I_ReloadHandler {
+
+        /**
+         * Called after all other onReload calls for the current operation.
+         * */
+        void finish();
+
+        /**
+         * Is called when an element has been replaced on the page.
+         *
+         * @param oldElement the old element
+         * @param newElement the replacement element that is currently on the page
+         */
+        void onReload(CmsContainerPageElementPanel oldElement, CmsContainerPageElementPanel newElement);
     }
 
     /**
@@ -502,23 +619,23 @@ public final class CmsContainerpageController {
      */
     private class ReloadElementAction extends CmsRpcAction<Map<String, CmsContainerElementData>> {
 
-        /** The callback to execute after the reload. */
-        private Runnable m_callback;
-
         /** The requested client id's. */
         private Set<String> m_clientIds;
+
+        /** The callback to execute after the reload. */
+        private I_ReloadHandler m_reloadHandler;
 
         /**
          * Constructor.<p>
          *
          * @param clientIds the client id's to reload
-         * @param callback the callback to execute after the reload
+         * @param reloadHandler  the callback to call after the elements have been replaced
          */
-        public ReloadElementAction(Set<String> clientIds, Runnable callback) {
+        public ReloadElementAction(Set<String> clientIds, I_ReloadHandler reloadHandler) {
 
             super();
             m_clientIds = clientIds;
-            m_callback = callback;
+            m_reloadHandler = reloadHandler;
         }
 
         /**
@@ -563,6 +680,7 @@ public final class CmsContainerpageController {
                     if (replacer.getElement().getInnerHTML().contains(CmsGwtConstants.FORMATTER_RELOAD_MARKER)) {
                         reloadMarkerFound = true;
                     }
+                    m_reloadHandler.onReload(containerElement, replacer);
                 } catch (Exception e) {
                     CmsDebugLog.getInstance().printLine("trying to replace");
                     CmsDebugLog.getInstance().printLine(e.getLocalizedMessage());
@@ -583,8 +701,8 @@ public final class CmsContainerpageController {
             m_handler.updateClipboard(result);
             resetEditButtons();
             CmsContainerpageController.get().fireEvent(new CmsContainerpageEvent(EventType.elementEdited));
-            if (m_callback != null) {
-                m_callback.run();
+            if (m_reloadHandler != null) {
+                m_reloadHandler.finish();
             }
         }
     }
@@ -671,6 +789,39 @@ public final class CmsContainerpageController {
     /** The client side id/setting-hash seperator. */
     public static final String CLIENT_ID_SEPERATOR = "#";
 
+    /** Custom event name. */
+    public static final String EVENT_DRAG = "ocDrag";
+
+    /** Custom event name. */
+    public static final String EVENT_DRAG_FINISHED = "ocDragFinished";
+
+    /** Custom event name. */
+    public static final String EVENT_DRAG_STARTED = "ocDragStarted";
+
+    /** Custom event name. */
+    public static final String EVENT_ELEMENT_ADDED = "ocElementAdded";
+
+    /** Custom event name. */
+    public static final String EVENT_ELEMENT_DELETED = "ocElementDeleted";
+
+    /** Custom event name. */
+    public static final String EVENT_ELEMENT_EDITED = "ocElementEdited";
+
+    /** Custom event name. */
+    public static final String EVENT_ELEMENT_EDITED_CONTENT = "ocElementEditedContent";
+
+    /** Custom event name. */
+    public static final String EVENT_ELEMENT_EDITED_SETTINGS = "ocElementEditedSettings";
+
+    /** Custom event name. */
+    public static final String EVENT_ELEMENT_MODIFIED = "ocElementModified";
+
+    /** Custom event name. */
+    public static final String EVENT_ELEMENT_MOVED = "ocElementMoved";
+
+    /** CSS class on the body to signal whether we are currently editing a group container. */
+    public static final String OC_EDITING_GROUPCONTAINER = "oc-editing-groupcontainer";
+
     /** Parameter name. */
     public static final String PARAM_REMOVEMODE = "removemode";
 
@@ -694,6 +845,9 @@ public final class CmsContainerpageController {
 
     /** The drag targets within this page. */
     Map<String, org.opencms.ade.containerpage.client.ui.CmsContainerPageContainer> m_targetContainers;
+
+    /** The UUIDs for which reuse status has already been checked. */
+    private Set<CmsUUID> m_checkedReuse = new HashSet<>();
 
     /** The container page drag and drop controller. */
     private I_CmsDNDController m_cntDndController;
@@ -764,6 +918,9 @@ public final class CmsContainerpageController {
     /** Handler for small elements. */
     private CmsSmallElementsHandler m_smallElementsHandler;
 
+    /** Alternative preview handler for events. */
+    private NativePreviewHandler m_previewHandler;
+
     /**
      * Constructor.<p>
      */
@@ -784,7 +941,7 @@ public final class CmsContainerpageController {
                     window.sessionStorage.setItem(entry.getKey(), entry.getValue());
                 }
             } catch (Exception e) {
-                DomGlobal.console.log("can't use webstorage API");
+                CmsGwtLog.log("can't use webstorage API");
             }
         } catch (SerializationException e) {
             CmsErrorDialog.handleException(
@@ -963,6 +1120,65 @@ public final class CmsContainerpageController {
     }
 
     /**
+     * Checks reuse status of a container element, then shows a warning dialog if it is reused, and finally executes an action.
+     *
+     * @param elementWidget the container element for which to check the reuse status
+     * @param action the action to execute after the reuse warning dialog is closed
+     */
+    public void checkReuse(CmsContainerPageElementPanel elementWidget, Runnable action) {
+
+        Runnable wrappedAction = () -> {
+            m_checkedReuse.add(elementWidget.getStructureId());
+            action.run();
+        };
+        if (elementWidget.isReused()
+            && CmsCoreProvider.get().isWarnWhenEditingReusedElement()
+            && !m_checkedReuse.contains(elementWidget.getStructureId())) {
+            CmsUUID id = elementWidget.getStructureId();
+            CmsUUID detailId = CmsContainerpageController.get().getData().getDetailId();
+            CmsUUID pageId = CmsCoreProvider.get().getStructureId();
+            CmsRpcAction<CmsReuseInfo> rpc = new CmsRpcAction<CmsReuseInfo>() {
+
+                @Override
+                public void execute() {
+
+                    start(0, true);
+                    getContainerpageService().getReuseInfo(pageId, detailId, id, this);
+                }
+
+                @Override
+                protected void onResponse(CmsReuseInfo result) {
+
+                    stop(false);
+                    if (result.getCount() == 0) {
+                        wrappedAction.run();
+                    } else {
+                        CmsReuseInfoDialog dialog = new CmsReuseInfoDialog(result, status -> {
+                            if (status.booleanValue()) {
+                                wrappedAction.run();
+                            }
+                        });
+                        dialog.show();
+                        // without delayed center(), positioning is inconsistent
+                        Timer timer = new Timer() {
+
+                            @Override
+                            public void run() {
+
+                                dialog.center();
+                            }
+                        };
+                        timer.schedule(100);
+                    }
+                }
+            };
+            rpc.execute();
+        } else {
+            action.run();
+        }
+    }
+
+    /**
      * Checks for container elements that are no longer present within the DOM.<p>
      */
     public void cleanUpContainers() {
@@ -1100,6 +1316,25 @@ public final class CmsContainerpageController {
             }
         };
         action.execute();
+    }
+
+    /**
+     * Creates the details object for a custom page editor event based on the given container page element.
+     *
+     * @param widget a container page element
+     * @return the event details object
+     */
+    public I_EventDetails createEventDetails(CmsContainerPageElementPanel widget) {
+
+        final Element parentContainerElement = CmsDomUtil.getAncestor(
+            widget.getElement(),
+            CmsContainerElement.CLASS_CONTAINER);
+
+        I_EventDetails details = Js.cast(new JsObject());
+        details.setIsPlaceholder(widget.isNew());
+        details.setElement(Js.cast(widget.getElement()));
+        details.setContainer(Js.cast(parentContainerElement));
+        return details;
     }
 
     /**
@@ -1940,9 +2175,11 @@ public final class CmsContainerpageController {
     public void handleConfirmRemove(final CmsContainerPageElementPanel element) {
 
         if (element.isNew()) {
+            I_EventDetails details = createEventDetails(element);
             element.removeFromParent();
             cleanUpContainers();
             setPageChanged();
+            sendElementDeleted(details);
             return;
         }
         checkElementReferences(element, new AsyncCallback<CmsRemovedElementStatus>() {
@@ -2002,11 +2239,13 @@ public final class CmsContainerpageController {
                                 }};
                             }
                             I_CmsDropContainer container = element.getParentTarget();
+                            I_EventDetails details = createEventDetails(element);
                             element.removeFromParent();
                             if (container instanceof CmsContainerPageContainer) {
                                 ((CmsContainerPageContainer)container).checkEmptyContainers();
                             }
                             cleanUpContainers();
+                            sendElementDeleted(details);
                             setPageChanged(nextActions);
                         }
                     });
@@ -2585,7 +2824,7 @@ public final class CmsContainerpageController {
      * @param ids the element ids
      * @param callback the callback to execute after the reload
      */
-    public void reloadElements(Collection<String> ids, Runnable callback) {
+    public void reloadElements(Collection<String> ids, I_ReloadHandler callback) {
 
         Set<String> related = new HashSet<String>();
         for (String id : ids) {
@@ -2594,6 +2833,53 @@ public final class CmsContainerpageController {
         if (!related.isEmpty()) {
             ReloadElementAction action = new ReloadElementAction(related, callback);
             action.execute();
+        }
+    }
+
+    /**
+     * Reloads the content for the given elements and related elements.
+     *
+     * @param ids the element ids
+     * @param callback the callback to execute after the reload
+     */
+    public void reloadElements(Collection<String> ids, Runnable callback) {
+
+        reloadElements(ids, new I_ReloadHandler() {
+
+            public void finish() {
+
+                if (callback != null) {
+                    callback.run();
+                }
+            }
+
+            public void onReload(CmsContainerPageElementPanel a, CmsContainerPageElementPanel b) {
+
+                // ignore
+            }
+        });
+
+    }
+
+    /**
+     * Reloads the content for the given element and all related elements.<p>
+     *
+     * Call this if the element content has changed.<p>
+     *
+     * @param ids the element ids
+     * @param callback the callback to execute after the reload
+     */
+    public void reloadElements(String[] ids, I_ReloadHandler callback) {
+
+        Set<String> related = new HashSet<String>();
+        for (int i = 0; i < ids.length; i++) {
+            related.addAll(getRelatedElementIds(ids[i]));
+        }
+        if (!related.isEmpty()) {
+            ReloadElementAction action = new ReloadElementAction(related, callback);
+            action.execute();
+        } else {
+            callback.finish();
         }
     }
 
@@ -2607,14 +2893,22 @@ public final class CmsContainerpageController {
      */
     public void reloadElements(String[] ids, Runnable callback) {
 
-        Set<String> related = new HashSet<String>();
-        for (int i = 0; i < ids.length; i++) {
-            related.addAll(getRelatedElementIds(ids[i]));
-        }
-        if (!related.isEmpty()) {
-            ReloadElementAction action = new ReloadElementAction(related, callback);
-            action.execute();
-        }
+        reloadElements(ids, new I_ReloadHandler() {
+
+            @Override
+            public void finish() {
+
+                if (callback != null) {
+                    callback.run();
+                }
+            }
+
+            @Override
+            public void onReload(CmsContainerPageElementPanel oldElement, CmsContainerPageElementPanel newElement) {
+
+            }
+        });
+
     }
 
     /**
@@ -2623,13 +2917,13 @@ public final class CmsContainerpageController {
      * @param elementWidget the widget of the container page element which should be reloaded
      * @param clientId the id of the container page element which should be reloaded
      * @param settings the new set of settings
-     * @param afterReloadAction a callback which is executed after the element has been reloaded
+     * @param reloadHandler the handler to call with the reloaded element
      */
     public void reloadElementWithSettings(
         final org.opencms.ade.containerpage.client.ui.CmsContainerPageElementPanel elementWidget,
         final String clientId,
         final Map<String, String> settings,
-        final I_CmsSimpleCallback<CmsContainerPageElementPanel> afterReloadAction) {
+        final I_ReloadHandler reloadHandler) {
 
         final I_CmsSimpleCallback<CmsContainerElementData> callback = new I_CmsSimpleCallback<CmsContainerElementData>() {
 
@@ -2639,7 +2933,8 @@ public final class CmsContainerpageController {
                     final CmsContainerPageElementPanel replacement = replaceContainerElement(elementWidget, newElement);
                     resetEditButtons();
                     addToRecentList(newElement.getClientId(), null);
-                    afterReloadAction.execute(replacement);
+                    reloadHandler.onReload(elementWidget, replacement);
+                    reloadHandler.finish();
                 } catch (Exception e) {
                     // should never happen
                     CmsDebugLog.getInstance().printLine(e.getLocalizedMessage());
@@ -2753,6 +3048,7 @@ public final class CmsContainerpageController {
             I_CmsDropContainer container = dragElement.getParentTarget();
             switch (removeMode) {
                 case saveAndCheckReferences:
+                    I_EventDetails details = createEventDetails(dragElement);
                     dragElement.removeFromParent();
                     if (container instanceof CmsContainerPageContainer) {
                         ((CmsContainerPageContainer)container).checkEmptyContainers();
@@ -2765,6 +3061,7 @@ public final class CmsContainerpageController {
                             checkReferencesToRemovedElement(id);
                         }
                     };
+                    sendElementDeleted(details);
                     setPageChanged(checkReferencesAction);
                     break;
                 case confirmRemove:
@@ -2772,11 +3069,13 @@ public final class CmsContainerpageController {
                     break;
                 case silent:
                 default:
+                    I_EventDetails details2 = createEventDetails(dragElement);
                     dragElement.removeFromParent();
                     if (container instanceof CmsContainerPageContainer) {
                         ((CmsContainerPageContainer)container).checkEmptyContainers();
                     }
                     cleanUpContainers();
+                    sendElementDeleted(details2);
                     setPageChanged();
                     break;
             }
@@ -2839,7 +3138,7 @@ public final class CmsContainerpageController {
     public void replaceElement(
         final CmsContainerPageElementPanel elementWidget,
         final String elementId,
-        Runnable callback) {
+        I_ReloadHandler handler) {
 
         final CmsRpcAction<CmsContainerElementData> action = new CmsRpcAction<CmsContainerElementData>() {
 
@@ -2867,15 +3166,16 @@ public final class CmsContainerpageController {
                     // cache the loaded element
                     m_elements.put(result.getClientId(), result);
                     try {
-                        replaceContainerElement(elementWidget, result);
+                        CmsContainerPageElementPanel replacer = replaceContainerElement(elementWidget, result);
                         resetEditButtons();
                         addToRecentList(result.getClientId(), null);
                         setPageChanged(new Runnable() {
 
                             public void run() {
 
-                                if (callback != null) {
-                                    callback.run();
+                                if (handler != null) {
+                                    handler.onReload(elementWidget, replacer);
+                                    handler.finish();
                                 }
                             }
                         });
@@ -2902,6 +3202,37 @@ public final class CmsContainerpageController {
         } else {
             action.execute();
         }
+    }
+
+    /**
+     * Replaces the given element with another content while keeping it's settings.<p>
+     *
+     * @param elementWidget the element to replace
+     * @param elementId the id of the replacing content
+     * @param callback  the callback to execute after the element is replaced
+     */
+    public void replaceElement(
+        final CmsContainerPageElementPanel elementWidget,
+        final String elementId,
+        Runnable callback) {
+
+        replaceElement(elementWidget, elementId, new I_ReloadHandler() {
+
+            @Override
+            public void finish() {
+
+                if (callback != null) {
+                    callback.run();
+                }
+            }
+
+            @Override
+            public void onReload(CmsContainerPageElementPanel oldElement, CmsContainerPageElementPanel newElement) {
+
+                // do nothing
+            }
+        });
+
     }
 
     /**
@@ -3287,6 +3618,127 @@ public final class CmsContainerpageController {
     }
 
     /**
+     * Sends the ocDragFinished event.
+     *
+     * @param dragElement the drag element
+     * @param target the target element
+     * @param isNew true if the dragged element is new
+     */
+    public void sendDragFinished(Element dragElement, Element target, boolean isNew) {
+
+        I_EventDetails details = Js.cast(new JsObject());
+        if (dragElement != null) {
+            details.setElement(Js.cast(dragElement));
+        }
+        if (target != null) {
+            final Element parentContainerElement = CmsDomUtil.getAncestor(target, CmsContainerElement.CLASS_CONTAINER);
+            details.setContainer(Js.cast(parentContainerElement));
+        }
+        if (isNew) {
+            details.setIsPlaceholder(isNew);
+        }
+        sendEvent(EVENT_DRAG_FINISHED, details);
+        I_EventDetails details2 = copyEventDetails(details);
+        details2.setType("finish");
+        sendEvent(EVENT_DRAG, details2);
+    }
+
+    /**
+     * Sends the ocDragStarted event.
+     *
+     * @param isNew true if the user started dragging a new element
+     */
+    public void sendDragStarted(boolean isNew) {
+
+        I_EventDetails details = Js.cast(new JsObject());
+        details.setIsPlaceholder(isNew);
+        sendEvent(EVENT_DRAG_STARTED, details);
+        I_EventDetails details2 = copyEventDetails(details);
+        details2.setType("start");
+        sendEvent(EVENT_DRAG, details2);
+    }
+
+    /**
+     * Sends the custom 'ocElementAdded' event for added container elements.
+     *
+     * @param widget the container element
+     */
+    public void sendElementAdded(CmsContainerPageElementPanel widget) {
+
+        if (widget != null) {
+            I_EventDetails details = createEventDetails(widget);
+            sendEvent(EVENT_ELEMENT_ADDED, details);
+            sendEvent(EVENT_ELEMENT_MODIFIED, addTypeToDetails(details, "add"));
+        }
+    }
+
+    /**
+     * Sends the custom 'ocElementDeleted' event for a deleted container element.
+     *
+     * @param details the event details
+     */
+    public void sendElementDeleted(I_EventDetails details) {
+
+        sendEvent(EVENT_ELEMENT_DELETED, details);
+        sendEvent(EVENT_ELEMENT_MODIFIED, addTypeToDetails(details, "delete"));
+    }
+
+    /**
+     * Sends the custom 'ocElementEditedContent' event for an edited container element.
+     *
+     * @param widget the container element
+     * @param replacedElement the element that was formerly on the page before the user edited it
+     * @param wasNew true if the element was a new element before editing
+     */
+    public void sendElementEditedContent(
+        CmsContainerPageElementPanel widget,
+        elemental2.dom.Element replacedElement,
+        boolean wasNew) {
+
+        if (widget != null) {
+            I_EventDetails details = createEventDetails(widget);
+            details.setReplacedElement(replacedElement);
+            details.setIsPlaceholder(wasNew);
+            sendEvent(EVENT_ELEMENT_EDITED_CONTENT, details);
+            sendEvent(EVENT_ELEMENT_EDITED, details);
+            sendEvent(EVENT_ELEMENT_MODIFIED, addTypeToDetails(details, "editContent"));
+        }
+    }
+
+    /**
+     * Sends the custom 'ocElementEditedSettings' event for an edited container element.
+     *
+     * @param widget the container element
+     * @param replacedWidget the former container element that has now been replaced with 'widget'
+     */
+    public void sendElementEditedSettings(
+        CmsContainerPageElementPanel widget,
+        CmsContainerPageElementPanel replacedWidget) {
+
+        if (widget != null) {
+            I_EventDetails details = createEventDetails(widget);
+            details.setReplacedElement(Js.cast(replacedWidget.getElement()));
+            sendEvent(EVENT_ELEMENT_EDITED_SETTINGS, details);
+            sendEvent(EVENT_ELEMENT_EDITED, details);
+            sendEvent(EVENT_ELEMENT_MODIFIED, addTypeToDetails(details, "editSettings"));
+        }
+    }
+
+    /**
+     * Sends the custom 'ocElementMoved' event for a moved container element.
+     *
+     * @param widget the container element
+     */
+    public void sendElementMoved(CmsContainerPageElementPanel widget) {
+
+        if (widget != null) {
+            I_EventDetails details = createEventDetails(widget);
+            sendEvent(EVENT_ELEMENT_MOVED, details);
+            sendEvent(EVENT_ELEMENT_MODIFIED, addTypeToDetails(details, "move"));
+        }
+    }
+
+    /**
      * Sets the flag indicating that a content element is being edited.<p>
      *
      * @param isContentEditing the flag indicating that a content element is being edited
@@ -3374,6 +3826,15 @@ public final class CmsContainerpageController {
     }
 
     /**
+     * Sets an alternative event preview handler.
+     *
+     * @param handler the alternative preview handler to use
+     */
+    public void setPreviewHandler(NativePreviewHandler handler) {
+        m_previewHandler = handler;
+    }
+
+    /**
      * Method to determine whether a container element should be shown in the current template context.<p>
      *
      * @param elementData the element data
@@ -3429,6 +3890,7 @@ public final class CmsContainerpageController {
                 }
             }
         };
+        RootPanel.get().addStyleName(OC_EDITING_GROUPCONTAINER);
         if ((m_groupEditor == null) && (groupContainer.isNew())) {
             callback.execute(Boolean.TRUE);
         } else {
@@ -3475,6 +3937,7 @@ public final class CmsContainerpageController {
     public void stopEditingGroupcontainer() {
 
         m_groupEditor = null;
+        RootPanel.get().removeStyleName(OC_EDITING_GROUPCONTAINER);
     }
 
     /**
@@ -3501,36 +3964,6 @@ public final class CmsContainerpageController {
         } else {
             RootPanel.get().addStyleName(nonDefaultViewClass);
         }
-    }
-
-    /**
-     * Updates the formatter in the server-side element bean.
-     *
-     * @param clientId the client element bean
-     * @param containerId the container id
-     * @param settings the settings
-     */
-    public void updateServerElementFormatter(String clientId, String containerId, Map<String, String> settings) {
-
-        CmsRpcAction<Void> action = new CmsRpcAction<Void>() {
-
-            @Override
-            public void execute() {
-
-                start(0, false);
-                getContainerpageService().updateServerElementFormatter(clientId, containerId, settings, this);
-
-            }
-
-            @Override
-            protected void onResponse(Void result) {
-
-                stop(false);
-
-            }
-
-        };
-        action.execute();
     }
 
     /**
@@ -3781,6 +4214,10 @@ public final class CmsContainerpageController {
     * @param event the native event
     */
     protected void previewNativeEvent(NativePreviewEvent event) {
+        if (m_previewHandler != null) {
+            m_previewHandler.onPreviewNativeEvent(event);
+            return;
+        }
 
         Event nativeEvent = Event.as(event.getNativeEvent());
 
@@ -4038,6 +4475,20 @@ public final class CmsContainerpageController {
     }
 
     /**
+     * Creates a copy of the event details and adds a 'type' field with the specified value to the result.
+     *
+     * @param details the details to copy
+     * @param type the type to add
+     * @return the copy with the added type
+     */
+    private I_EventDetails addTypeToDetails(I_EventDetails details, String type) {
+
+        I_EventDetails result = copyEventDetails(details);
+        result.setType(type);
+        return result;
+    }
+
+    /**
      * Checks whether there are other references to a given container page element.<p>
      *
      * @param element the element to check
@@ -4132,6 +4583,22 @@ public final class CmsContainerpageController {
         if (previousLevel != m_currentEditLevel) {
             CmsNotification.get().send(Type.NORMAL, message);
         }
+    }
+
+    /**
+     * Copies an event details object.
+     *
+     * @param original the original event details
+     * @return the copied object
+     */
+    private I_EventDetails copyEventDetails(I_EventDetails original) {
+
+        JsPropertyMap<Object> originalMap = Js.cast(original);
+        JsPropertyMap<Object> result = Js.cast(new JsObject());
+        originalMap.forEach(key -> {
+            result.set(key, originalMap.get(key));
+        });
+        return Js.cast(result);
     }
 
     /**
@@ -4256,6 +4723,32 @@ public final class CmsContainerpageController {
     private native void sendBeacon(String url, String data) /*-{
         $wnd.navigator.sendBeacon(url, data);
     }-*/;
+
+    /**
+     * Creates a custom event and dispatches it to the document.
+     *
+     * @param type the event type
+     * @param details the event details
+     */
+    private void sendEvent(String type, I_EventDetails details) {
+
+        CustomEventInit<I_EventDetails> init = Js.cast(CustomEventInit.create());
+        init.setBubbles(false);
+        init.setCancelable(false);
+        init.setDetail(details);
+        CustomEvent<I_EventDetails> event1 = new elemental2.dom.CustomEvent<I_EventDetails>(type, init);
+        CustomEvent<I_EventDetails> event = event1;
+        // fire event in a timer so the page editor is not blocked by the event handler reacting to it
+        Timer timer = new Timer() {
+
+            @Override
+            public void run() {
+
+                DomGlobal.document.documentElement.dispatchEvent(event);
+            }
+        };
+        timer.schedule(0);
+    }
 
     /**
      * Checks whether given element is a model group and it's option bar edit points should be visible.<p>

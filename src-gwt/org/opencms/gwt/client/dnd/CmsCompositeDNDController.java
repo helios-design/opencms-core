@@ -59,6 +59,7 @@ public class CmsCompositeDNDController implements I_CmsDNDController {
         };
     }
 
+
     /**
      * @see org.opencms.gwt.client.dnd.I_CmsDNDController#onAnimationStart(org.opencms.gwt.client.dnd.I_CmsDraggable, org.opencms.gwt.client.dnd.I_CmsDropTarget, org.opencms.gwt.client.dnd.CmsDNDHandler)
      */
@@ -143,6 +144,30 @@ public class CmsCompositeDNDController implements I_CmsDNDController {
         for (I_CmsDNDController controller : m_controllers) {
             controller.onTargetLeave(draggable, target, handler);
         }
+    }
+
+    /**
+     * @see org.opencms.gwt.client.dnd.I_CmsDNDController#postClear(org.opencms.gwt.client.dnd.I_CmsDraggable, org.opencms.gwt.client.dnd.I_CmsDropTarget)
+     */
+    @Override
+    public void postClear(I_CmsDraggable draggable, I_CmsDropTarget target) {
+        m_controllers.forEach(controller -> {
+            controller.postClear(draggable, target);
+
+        });
+    }
+
+    /**
+     * @see org.opencms.gwt.client.dnd.I_CmsDNDController#startPlacementMode(org.opencms.gwt.client.dnd.I_CmsDraggable, org.opencms.gwt.client.dnd.CmsDNDHandler)
+     */
+    @Override
+    public boolean startPlacementMode(I_CmsDraggable draggable, CmsDNDHandler handler) {
+        for (I_CmsDNDController controller: m_controllers) {
+            if (controller.startPlacementMode(draggable, handler)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

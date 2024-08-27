@@ -40,7 +40,7 @@ public final class Messages extends A_CmsMessageBundle {
     /** The copyright message for OpenCms. */
     public static final String[] COPYRIGHT_BY_ALKACON = {
         "",
-        "Copyright (c) 2002 - 2023 Alkacon Software GmbH & Co. KG",
+        "Copyright (c) 2002 - 2024 Alkacon Software GmbH & Co. KG",
         "OpenCms comes with ABSOLUTELY NO WARRANTY",
         "This is free software, and you are welcome to",
         "redistribute it under certain conditions.",
@@ -166,7 +166,13 @@ public final class Messages extends A_CmsMessageBundle {
     public static final String GUI_SHELL_ECHO_ON_0 = "GUI_SHELL_ECHO_ON_0";
 
     /** Message constant for key in the resource bundle. */
-    public static final String GUI_SHELL_ERR_ADDITIONAL_COMMANDS_1 = "GUI_SHELL_ERR_ADDITIONAL_COMMANDS_1";
+    public static final String GUI_SHELL_ERR_ADDITIONAL_COMMANDS_NOT_CMSSHELLCOMMANDS_1 = "GUI_SHELL_ERR_ADDITIONAL_COMMANDS_NOT_CMSSHELLCOMMANDS_1";
+
+    /** Message constant for key in the resource bundle. */
+    public static final String GUI_SHELL_ERR_ADDITIONAL_COMMANDS_CLASS_NOT_FOUND_1 = "GUI_SHELL_ERR_ADDITIONAL_COMMANDS_CLASS_NOT_FOUND_1";
+
+    /** Message constant for key in the resource bundle. */
+    public static final String GUI_SHELL_ERR_ADDITIONAL_COMMANDS_DURING_INSTANTIATION_2 = "GUI_SHELL_ERR_ADDITIONAL_COMMANDS_DURING_INSTANTIATION_2";
 
     /** Message constant for key in the resource bundle. */
     public static final String GUI_SHELL_ERR_SCRIPTFILE_1 = "GUI_SHELL_ERR_SCRIPTFILE_1";

@@ -56,6 +56,7 @@ import org.opencms.ade.containerpage.shared.CmsInheritanceContainer;
 import org.opencms.ade.containerpage.shared.CmsInheritanceInfo;
 import org.opencms.ade.containerpage.shared.CmsLocaleLinkBean;
 import org.opencms.ade.containerpage.shared.CmsRemovedElementStatus;
+import org.opencms.ade.containerpage.shared.CmsReuseInfo;
 import org.opencms.ade.containerpage.shared.rpc.I_CmsContainerpageService;
 import org.opencms.ade.detailpage.CmsDetailPageInfo;
 import org.opencms.ade.detailpage.CmsDetailPageResourceHandler;
@@ -93,6 +94,7 @@ import org.opencms.gwt.shared.CmsListElementCreationDialogData;
 import org.opencms.gwt.shared.CmsListElementCreationOption;
 import org.opencms.gwt.shared.CmsListInfoBean;
 import org.opencms.gwt.shared.CmsModelResourceInfo;
+import org.opencms.gwt.shared.CmsResourceListInfo;
 import org.opencms.gwt.shared.CmsTemplateContextInfo;
 import org.opencms.gwt.shared.I_CmsAutoBeanFactory;
 import org.opencms.gwt.shared.I_CmsListAddMetadata;
@@ -169,6 +171,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -309,6 +312,9 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
         }
     }
 
+    /** Runtime property key to enable / disable placement mode. */
+    public static final String PARAM_PAGE_EDITOR_PLACEMENT_MODE_ENABLED = "pageEditor.placementMode.enabled";
+
     /** Additional info key for storing the "edit small elements" setting on the user. */
     public static final String ADDINFO_EDIT_SMALL_ELEMENTS = "EDIT_SMALL_ELEMENTS";
 
@@ -326,6 +332,9 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
 
     /** Serial version UID. */
     private static final long serialVersionUID = -6188370638303594280L;
+
+    /** Maximum number of reuse locations to display in the reuse warning dialog. */
+    public static final int MAX_VISIBLE_ELEMENT_USES = 100;
 
     /** The configuration data of the current container page context. */
     private CmsADEConfigData m_configData;
@@ -476,6 +485,7 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
      * @param response the current response
      * @throws Exception if something goes wrong
      */
+    @SuppressWarnings("resource")
     public static void unlockPage(CmsObject cms, HttpServletRequest request, HttpServletResponse response)
     throws Exception {
 
@@ -489,6 +499,7 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
             LOG.debug("can't unlock page in online project");
             return;
         }
+
         byte[] byteData = CmsFileUtil.readFully(request.getInputStream(), false);
 
         String encoding = request.getCharacterEncoding();
@@ -1428,6 +1439,15 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
                 detailContentId,
                 containers,
                 locale);
+
+            CmsListInfoBean info = new CmsListInfoBean();
+            // type title and subtitle
+            String realType = getServerIdString(resourceType);
+            Locale wpLocale = OpenCms.getWorkplaceManager().getWorkplaceLocale(getCmsObject());
+            info.setTitle(CmsWorkplaceMessages.getResourceTypeName(wpLocale, realType));
+            info.setSubTitle(CmsWorkplaceMessages.getResourceTypeDescription(wpLocale, realType));
+            info.setBigIconClasses(CmsIconUtil.getIconClasses(realType, null, false));
+            result.setListInfo(info);
         } catch (Throwable e) {
             error(e);
         }
@@ -1508,6 +1528,65 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
             CmsUUID structureId = convertToServerId(id);
             return internalGetRemovedElementStatus(structureId, containerpageId);
         } catch (CmsException e) {
+            error(e);
+            return null;
+        }
+    }
+
+    /**
+     * @see org.opencms.ade.containerpage.shared.rpc.I_CmsContainerpageService#getReuseInfo(org.opencms.util.CmsUUID, org.opencms.util.CmsUUID, org.opencms.util.CmsUUID)
+     */
+    public CmsReuseInfo getReuseInfo(CmsUUID pageId, CmsUUID detailId, CmsUUID elementId) throws CmsRpcException {
+
+        try {
+            CmsObject cms = getCmsObject();
+            Locale locale = OpenCms.getWorkplaceManager().getWorkplaceLocale(cms);
+            CmsResource detailResource = null;
+            CmsResource element = cms.readResource(elementId, CmsResourceFilter.IGNORE_EXPIRATION);
+            if (detailId != null) {
+                detailResource = cms.readResource(detailId, CmsResourceFilter.IGNORE_EXPIRATION);
+            }
+            Set<CmsUUID> idsForCurrentPage = CmsElementUtil.getPageAndDetailOnlyIds(
+                getCmsObject(),
+                pageId,
+                detailResource);
+            List<CmsResource> allUses = OpenCms.getADEManager().getOfflineElementUses(element).filter(
+                res -> !idsForCurrentPage.contains(res.getStructureId())).collect(Collectors.toList());
+            List<CmsResourceListInfo> infos = new ArrayList<>();
+            int visibleCount = 0;
+            for (CmsResource use : allUses) {
+                try {
+                    // make sure resource is visible to current user, otherwise continue with next resource
+                    cms.readResource(use.getStructureId(), CmsResourceFilter.IGNORE_EXPIRATION.addRequireVisible());
+                    visibleCount += 1;
+                    CmsResourceListInfo info = new CmsResourceListInfo();
+                    CmsVfsService.addPageInfo(cms, use, info);
+                    info.setStructureId(use.getStructureId());
+                    infos.add(info);
+                    if (visibleCount >= MAX_VISIBLE_ELEMENT_USES) {
+                        break;
+                    }
+                } catch (CmsVfsResourceNotFoundException | CmsPermissionViolationException e) {
+                    // ignore
+                } catch (Exception e) {
+                    LOG.error(e.getLocalizedMessage(), e);
+                }
+            }
+            CmsListInfoBean elementInfo = CmsVfsService.getPageInfo(cms, element);
+            String message;
+            CmsMessages messages = Messages.get().getBundle(locale);
+            if (allUses.size() > 0) {
+                message = messages.key(Messages.GUI_REUSE_CHECK_WARNING_TEXT_1, "" + allUses.size());
+            } else {
+                message = "";
+            }
+            String title = messages.key(Messages.GUI_REUSE_CHECK_TITLE_0);
+            if (allUses.size() > infos.size()) {
+                message = message + "\n" + messages.key(Messages.GUI_REUSE_CHECK_ONLY_SHOW_N_1, infos.size());
+            }
+            CmsReuseInfo result = new CmsReuseInfo(elementInfo, infos, message, title, allUses.size());
+            return result;
+        } catch (Exception e) {
             error(e);
             return null;
         }
@@ -1643,7 +1722,7 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
                 request.getSession());
             CmsUUID detailContainerPageId = null;
             if (detailResource != null) {
-                locationCache.setPageEditorResource(cms.getRequestContext().getSiteRoot(), detailResource);
+                locationCache.setPageEditorResource(cms, cms.getRequestContext().getSiteRoot(), detailResource);
                 CmsObject rootCms = OpenCms.initCmsObject(cms);
                 rootCms.getRequestContext().setSiteRoot("");
                 String detailResourcePath = detailResource.getRootPath();
@@ -1672,7 +1751,7 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
                 }
             } else {
                 if (!isModelPage && !isEditingModelGroup) {
-                    locationCache.setPageEditorResource(cms.getRequestContext().getSiteRoot(), containerPage);
+                    locationCache.setPageEditorResource(cms, cms.getRequestContext().getSiteRoot(), containerPage);
                     sessionStorageData.put(
                         CmsGwtConstants.LAST_CONTAINER_PAGE_ID,
                         containerPage.getStructureId().toString());
@@ -1795,6 +1874,9 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
                     || Boolean.valueOf(param).booleanValue();
             }
             data.setAllowSettingsInEditor(allowSettingsInEditor);
+            String placementModeEnabledStr = (String)OpenCms.getRuntimeProperty(PARAM_PAGE_EDITOR_PLACEMENT_MODE_ENABLED);
+            boolean placementModeEnabled = (placementModeEnabledStr == null) || Boolean.parseBoolean(placementModeEnabledStr);
+            data.setPlacementModeEnabled(placementModeEnabled);
             data.setSessionStorageData(sessionStorageData);
         } catch (Throwable e) {
             error(e);
@@ -1883,7 +1965,7 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
      */
     public void saveClipboardTab(int tabIndex) {
 
-        getRequest().getSession().setAttribute(ATTR_CLIPBOARD_TAB, new Integer(tabIndex));
+        getRequest().getSession().setAttribute(ATTR_CLIPBOARD_TAB, Integer.valueOf(tabIndex));
     }
 
     /**
@@ -2225,30 +2307,6 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
     }
 
     /**
-     * @see org.opencms.ade.containerpage.shared.rpc.I_CmsContainerpageService#updateServerElementFormatter(java.lang.String, java.lang.String, java.util.Map)
-     */
-    public void updateServerElementFormatter(String clientId, String containerId, Map<String, String> clientSettings)
-    throws CmsRpcException {
-
-        try {
-            CmsContainerElementBean elementBean = getSessionCache().getCacheContainerElement(clientId);
-            if (elementBean != null) {
-                HashMap<String, String> newSettings = new HashMap<>(elementBean.getIndividualSettings());
-                String key = CmsFormatterConfig.getSettingsKeyForContainer(containerId);
-                String formatterId = clientSettings.get(key);
-                if (formatterId != null) {
-                    newSettings.put(key, formatterId);
-                }
-                elementBean = CmsContainerElementBean.cloneWithSettings(elementBean, newSettings);
-                getSessionCache().setCacheContainerElement(elementBean.editorHash(), elementBean);
-            }
-
-        } catch (Exception e) {
-            error(e);
-        }
-    }
-
-    /**
      * Gets the settings which should be updated for an element in the DND case.<p>
      *
      * @param config the sitemap configuration
@@ -2267,6 +2325,7 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
         String dndContainer) {
 
         Map<String, String> result = Maps.newHashMap();
+
         if (dndContainer == null) {
             return result;
         }
@@ -2348,10 +2407,11 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
             if (idString != null) {
                 // the formatter setting has changed
                 I_CmsResourceType resType = OpenCms.getResourceManager().getResourceType(elementBean.getResource());
-                getSessionCache().addRecentFormatter(resType.getTypeName(), idString);
+                if (!(resType instanceof CmsResourceTypeFunctionConfig)) {
+                    getSessionCache().addRecentFormatter(resType.getTypeName(), idString);
+                }
             }
         }
-
     }
 
     /**
@@ -2752,6 +2812,7 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
                 if (!dndSettings.isEmpty()) {
                     CmsContainerElementBean dndElementBean = overrideSettings(element, dndSettings);
                     getSessionCache().setCacheContainerElement(dndElementBean.editorHash(), dndElementBean);
+                    element = dndElementBean;
                     dndId = dndElementBean.editorHash();
                     Map<String, CmsContainerElementData> dndResults = getElements(
                         config,
@@ -2772,7 +2833,6 @@ public class CmsContainerpageService extends CmsGwtService implements I_CmsConta
             if (elementData == null) {
                 continue;
             }
-            // make sure the element with it's current settings is cached
             getSessionCache().setCacheContainerElement(element.editorHash(), element);
             elementData.setDndId(dndId);
             result.put(entry.getKey(), elementData);

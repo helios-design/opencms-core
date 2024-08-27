@@ -161,11 +161,11 @@ public class CmsAdvancedPasswordHandler extends CmsDefaultPasswordHandler {
             }
             if ((descending > 1) || (ascending > 1) || (equals > 1)) {
                 Object[] msgArgs = new Object[] {
-                    new Character(last),
-                    new Character(current),
-                    new Integer(descending),
-                    new Integer(ascending),
-                    new Integer(equals)};
+                    Character.valueOf(last),
+                    Character.valueOf(current),
+                    Integer.valueOf(descending),
+                    Integer.valueOf(ascending),
+                    Integer.valueOf(equals)};
                 CmsMessageContainer message = Messages.get().container(Messages.ERR_PWD_CHARS_IN_A_ROW_5, msgArgs);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug(message.key());

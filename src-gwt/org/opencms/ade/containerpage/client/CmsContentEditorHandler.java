@@ -27,6 +27,7 @@
 
 package org.opencms.ade.containerpage.client;
 
+import org.opencms.ade.containerpage.client.CmsContainerpageController.I_ReloadHandler;
 import org.opencms.ade.containerpage.client.ui.CmsContainerPageContainer;
 import org.opencms.ade.containerpage.client.ui.CmsContainerPageElementPanel;
 import org.opencms.ade.containerpage.client.ui.CmsOptionDialog;
@@ -52,7 +53,9 @@ import org.opencms.gwt.shared.CmsGwtConstants;
 import org.opencms.util.CmsStringUtil;
 import org.opencms.util.CmsUUID;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.google.gwt.dom.client.Element;
@@ -127,10 +130,38 @@ public class CmsContentEditorHandler implements I_CmsContentEditorHandler {
         if (m_currentElementId == null) {
             m_currentElementId = structureId.toString();
         }
-        Runnable checkPublishLocks = () -> {
-            if (usedPublishDialog) {
-                m_handler.m_controller.startPublishLockCheck();
+        // we keep track of how many reloads are still ongoing - if all of them are done, we can send the edit events
+        final int[] reloadCounter = {0};
+
+        I_ReloadHandler reloadHandler = new I_ReloadHandler() {
+
+            private List<Runnable> m_todo = new ArrayList<>();
+
+            @Override
+            public void finish() {
+
+                if (usedPublishDialog) {
+                    m_handler.m_controller.startPublishLockCheck();
+                }
+                reloadCounter[0] -= 1;
+                if (reloadCounter[0] <= 0) {
+                    m_todo.forEach(item -> item.run());
+                }
+
             }
+
+            @Override
+            public void onReload(CmsContainerPageElementPanel oldElement, CmsContainerPageElementPanel newElement) {
+
+                m_todo.add(() -> {
+                    m_handler.m_controller.sendElementEditedContent(
+                        newElement,
+                        Js.cast(oldElement.getElement()),
+                        isNew);
+
+                });
+            }
+
         };
 
         if (m_replaceElement != null) {
@@ -142,18 +173,24 @@ public class CmsContentEditorHandler implements I_CmsContentEditorHandler {
                         CmsContainerpageController.getCurrentUri(),
                         CmsContainerpageController.getServerId(m_currentElementId)));
             }
-
-            m_handler.replaceElement(m_replaceElement, m_currentElementId, checkPublishLocks);
+            reloadCounter[0] += 1;
+            m_handler.m_controller.replaceElement(
+                m_replaceElement,
+                m_currentElementId,
+                reloadHandler);
             m_replaceElement = null;
             if (m_dependingElementId != null) {
-                m_handler.reloadElements(new String[] {m_dependingElementId}, checkPublishLocks);
+                reloadCounter[0] += 1;
+                m_handler.m_controller.reloadElements(new String[] {m_dependingElementId}, reloadHandler);
                 m_dependingElementId = null;
             }
         } else if (m_dependingElementId != null) {
-            m_handler.reloadElements(new String[] {m_currentElementId, m_dependingElementId}, checkPublishLocks);
+            reloadCounter[0] += 1;
+            m_handler.m_controller.reloadElements(new String[] {m_currentElementId, m_dependingElementId}, reloadHandler);
             m_dependingElementId = null;
         } else {
-            m_handler.reloadElements(new String[] {m_currentElementId}, checkPublishLocks);
+            reloadCounter[0] += 1;
+            m_handler.m_controller.reloadElements(new String[] {m_currentElementId}, reloadHandler);
         }
         if (m_currentElementId != null) {
             m_handler.addToRecent(m_currentElementId);
@@ -490,7 +527,7 @@ public class CmsContentEditorHandler implements I_CmsContentEditorHandler {
                         CmsContentEditorHandler.this.onClose(
                             element.getSitePath(),
                             new CmsUUID(serverId),
-                            false,
+                            wasNew,
                             hasChangedSettings,
                             usedPublishDialog);
 
@@ -499,6 +536,7 @@ public class CmsContentEditorHandler implements I_CmsContentEditorHandler {
                 if (inline && CmsContentEditor.hasEditable(element.getElement())) {
                     addEditingHistoryItem(true);
                     CmsEditorContext context = getEditorContext();
+                    context.setReusedElement(element.isReused());
                     context.setHtmlContextInfo(getContextInfo(element));
                     // remove expired style before initializing the editor
                     element.setReleasedAndNotExpired(true);
@@ -516,6 +554,7 @@ public class CmsContentEditorHandler implements I_CmsContentEditorHandler {
                     addEditingHistoryItem(false);
                     Map<String, String> settingPresets = new HashMap<String, String>();
                     CmsEditorContext context = getEditorContext();
+                    context.setReusedElement(element.isReused());
                     I_CmsDropContainer dropContainer = element.getParentTarget();
                     if (dropContainer instanceof CmsContainerPageContainer) {
                         CmsContainerPageContainer container = (CmsContainerPageContainer)dropContainer;

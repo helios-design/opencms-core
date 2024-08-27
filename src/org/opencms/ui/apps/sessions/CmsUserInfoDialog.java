@@ -211,13 +211,13 @@ public class CmsUserInfoDialog extends CmsBasicDialog {
     private List<String> getFurtherInfoLines(CmsSessionInfo currentSession) {
 
         boolean neverActive = false;
-        Long inacTime = new Long(0L);
+        Long inacTime = Long.valueOf(0L);
         List<String> res = new ArrayList<String>();
         if (currentSession == null) {
-            inacTime = new Long(System.currentTimeMillis() - m_user.getLastlogin());
+            inacTime = Long.valueOf(System.currentTimeMillis() - m_user.getLastlogin());
             neverActive = m_user.getLastlogin() == 0L;
         } else {
-            inacTime = new Long(System.currentTimeMillis() - currentSession.getTimeLastAction());
+            inacTime = Long.valueOf(System.currentTimeMillis() - currentSession.getTimeLastAction());
         }
 
         String[] inactiveTime = CmsSessionInfo.getHourMinuteSecondTimeString(inacTime.longValue());
@@ -272,7 +272,7 @@ public class CmsUserInfoDialog extends CmsBasicDialog {
         if (days == 1) {
             return CmsVaadinUtils.getMessageText(Messages.GUI_USER_INFO_LAST_LOGIN_YESTERDAY_0);
         }
-        return CmsVaadinUtils.getMessageText(Messages.GUI_USER_INFO_LAST_LOGIN_DAYS_AGO_1, new Integer(days));
+        return CmsVaadinUtils.getMessageText(Messages.GUI_USER_INFO_LAST_LOGIN_DAYS_AGO_1, Integer.valueOf(days));
     }
 
     /**
