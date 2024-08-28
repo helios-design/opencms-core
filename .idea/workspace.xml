@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f4af9fce-1949-4a82-945d-8409341ecac8" name="Changes" comment="adapt CmsDateBox to use server time instead of users' local time in structured content editor">
+      <change beforePath="$PROJECT_DIR$/dependencies.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies.gradle" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$">
+      <ProjectState />
+    </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <task path="$PROJECT_DIR$">
+          <activation />
+        </task>
+        <projects_view>
+          <tree_state>
+            <expand>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="opencms-core" type="f1a62948:ProjectNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="opencms-core" type="f1a62948:ProjectNode" />
+                <item name="Run Configurations" type="7b0102dc:RunConfigurationsNode" />
+              </path>
+            </expand>
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="branch_17_neklcustom" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2aoHGAfUVKPkxi6AeLF6B2Ua71c" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="Git.Branch.Popup.ShowAllRemotes" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="project.structure.last.edited" value="Project" />
+    <property name="project.structure.proportion" value="0.15" />
+    <property name="project.structure.side.proportion" value="0.2" />
+    <property name="settings.editor.selected.configurable" value="org.jetbrains.plugins.github.ui.GithubSettingsConfigurable" />
+  </component>
+  <component name="RunManager" selected="Gradle.opencms-core [war]">
+    <configuration name="opencms-core [clean]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="clean" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="opencms-core [war]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="war" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Gradle.opencms-core [war]" />
+        <item itemvalue="Gradle.opencms-core [clean]" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f4af9fce-1949-4a82-945d-8409341ecac8" name="Changes" comment="" />
+      <created>1704977915155</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1704977915155</updated>
+      <workItem from="1704977916303" duration="11926000" />
+      <workItem from="1724777460322" duration="333000" />
+      <workItem from="1724777803410" duration="1323000" />
+      <workItem from="1724779190764" duration="2003000" />
+    </task>
+    <task id="LOCAL-00001" summary="Use pipe symbol instead of comma for multiselect fields">
+      <created>1704986540984</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1704986540984</updated>
+    </task>
+    <task id="LOCAL-00002" summary="make sure locale is not added to workplace when using SingleTree localization">
+      <created>1704986688592</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1704986688592</updated>
+    </task>
+    <task id="LOCAL-00003" summary="add functionality to disable IP based client token">
+      <created>1704986848509</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1704986848509</updated>
+    </task>
+    <task id="LOCAL-00004" summary="prevent certain privileged accounts from logging in to the Workplace">
+      <created>1704987642035</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1704987642035</updated>
+    </task>
+    <task id="LOCAL-00005" summary="add helper files">
+      <created>1704987666268</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1704987666268</updated>
+    </task>
+    <task id="LOCAL-00006" summary="add build instructions to README.md">
+      <created>1704988519007</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1704988519007</updated>
+    </task>
+    <task id="LOCAL-00007" summary="adapt date converter to use server time instead of users' local time in structured content editor">
+      <created>1704989654764</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1704989654764</updated>
+    </task>
+    <task id="LOCAL-00008" summary="adapt CmsDateBox to use server time instead of users' local time in structured content editor">
+      <created>1704990204707</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1704990204707</updated>
+    </task>
+    <task id="LOCAL-00009" summary="disable IP based client token">
+      <created>1704990251571</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1704990251571</updated>
+    </task>
+    <task id="LOCAL-00010" summary="add necessary dependencies for Java 11">
+      <created>1706265389221</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1706265389221</updated>
+    </task>
+    <task id="LOCAL-00011" summary="changes to gradle for Java 11">
+      <created>1724777599687</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1724777599687</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Use pipe symbol instead of comma for multiselect fields">
+      <created>1724778270531</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1724778270531</updated>
+    </task>
+    <task id="LOCAL-00013" summary=" make sure locale is not added to workplace when using SingleTree localization">
+      <created>1724778373583</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1724778373583</updated>
+    </task>
+    <task id="LOCAL-00014" summary="add functionality to disable IP based client token">
+      <created>1724778455242</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1724778455242</updated>
+    </task>
+    <task id="LOCAL-00015" summary="add build instructions to README.md">
+      <created>1724778571736</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1724778571736</updated>
+    </task>
+    <task id="LOCAL-00016" summary="adapt date converter to use server time instead of users' local time in structured content editor">
+      <created>1724778899861</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1724778899861</updated>
+    </task>
+    <task id="LOCAL-00017" summary="adapt CmsDateBox to use server time instead of users' local time in structured content editor">
+      <created>1724779023360</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1724779023360</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="make sure locale is not added to workplace when using SingleTree localization" />
+    <MESSAGE value="prevent certain privileged accounts from logging in to the Workplace" />
+    <MESSAGE value="add helper files" />
+    <MESSAGE value="disable IP based client token" />
+    <MESSAGE value="add necessary dependencies for Java 11" />
+    <MESSAGE value="changes to gradle for Java 11" />
+    <MESSAGE value="Use pipe symbol instead of comma for multiselect fields" />
+    <MESSAGE value=" make sure locale is not added to workplace when using SingleTree localization" />
+    <MESSAGE value="add functionality to disable IP based client token" />
+    <MESSAGE value="add build instructions to README.md" />
+    <MESSAGE value="adapt date converter to use server time instead of users' local time in structured content editor" />
+    <MESSAGE value="adapt CmsDateBox to use server time instead of users' local time in structured content editor" />
+    <option name="LAST_COMMIT_MESSAGE" value="adapt CmsDateBox to use server time instead of users' local time in structured content editor" />
+  </component>
+</project>
