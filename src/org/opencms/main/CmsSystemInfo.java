@@ -172,6 +172,12 @@ public class CmsSystemInfo {
     /** Default encoding, can be set in opencms-system.xml. */
     private String m_defaultEncoding;
 
+    /** The date box server time offset in hours. */
+    private int m_dateBoxServerTimeOffset = -7;
+
+    /** Flag to control whether date box widgets should use server time. */
+    private boolean m_dateBoxUseServerTime = true;
+
     /** The device selector instance. */
     private I_CmsJspDeviceSelector m_deviceSelector;
 
@@ -391,6 +397,16 @@ public class CmsSystemInfo {
     public String getDefaultEncoding() {
 
         return m_defaultEncoding;
+    }
+
+    /**
+     * Gets the date box server time offset in hours.<p>
+     *
+     * @return the date box server time offset in hours
+     */
+    public int getDateBoxServerTimeOffset() {
+
+        return m_dateBoxServerTimeOffset;
     }
 
     /**
@@ -737,6 +753,36 @@ public class CmsSystemInfo {
     public boolean isRestrictDetailContents() {
 
         return m_restrictDetailContents;
+    }
+
+    /**
+     * Returns whether date box widgets should use server time.<p>
+     *
+     * @return true if date box widgets should use server time
+     */
+    public boolean isDateBoxUseServerTime() {
+
+        return m_dateBoxUseServerTime;
+    }
+
+    /**
+     * Sets the date box server time offset in hours.<p>
+     *
+     * @param dateBoxServerTimeOffset the date box server time offset in hours
+     */
+    public void setDateBoxServerTimeOffset(int dateBoxServerTimeOffset) {
+
+        m_dateBoxServerTimeOffset = dateBoxServerTimeOffset;
+    }
+
+    /**
+     * Sets whether date box widgets should use server time.<p>
+     *
+     * @param dateBoxUseServerTime true if date box widgets should use server time
+     */
+    public void setDateBoxUseServerTime(boolean dateBoxUseServerTime) {
+
+        m_dateBoxUseServerTime = dateBoxUseServerTime;
     }
 
     /**

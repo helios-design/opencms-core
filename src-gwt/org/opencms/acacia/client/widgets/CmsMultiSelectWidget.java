@@ -66,6 +66,12 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
     /** Default value of rows to be shown. */
     private static final int DEFAULT_ROWS_SHOWN = 10;
 
+    /** Separator used for storing multiple selected values. */
+    private static final String VALUE_SEPARATOR = "|";
+
+    /** Regex pattern for splitting stored values by the value separator. */
+    private static final String VALUE_SEPARATOR_PATTERN = "\\|";
+
     /** The main panel of this widget. */
     FlowPanel m_panel = new FlowPanel();
 
@@ -285,8 +291,8 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
 
         String[] values;
         if ((value != null) && (value != "")) {
-            if (value.contains(",")) {
-                values = value.split(",");
+            if (value.contains(VALUE_SEPARATOR)) {
+                values = value.split(VALUE_SEPARATOR_PATTERN);
             } else {
                 values = new String[] {value};
             }
@@ -340,7 +346,7 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
     }
 
     /**
-     * Generate a string with all selected checkboxes separated with ','.
+     * Generate a string with all selected checkboxes separated with the value separator.
      *
      * @return a string with all selected checkboxes
      * */
@@ -349,11 +355,11 @@ public class CmsMultiSelectWidget extends Composite implements I_CmsEditWidget {
         String result = "";
         for (CmsCheckBox checkbox : m_checkboxes) {
             if (checkbox.isChecked()) {
-                result += checkbox.getInternalValue() + ",";
+                result += checkbox.getInternalValue() + VALUE_SEPARATOR;
             }
         }
-        if (result.contains(",")) {
-            result = result.substring(0, result.lastIndexOf(","));
+        if (result.contains(VALUE_SEPARATOR)) {
+            result = result.substring(0, result.lastIndexOf(VALUE_SEPARATOR));
         }
         return result;
     }

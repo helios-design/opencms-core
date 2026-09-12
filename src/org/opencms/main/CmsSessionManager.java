@@ -124,6 +124,9 @@ public class CmsSessionManager {
     /** Admin CmsObject. */
     private CmsObject m_adminCms;
 
+    /** Flag to control whether client tokens should include the IP address. */
+    private boolean m_generateIpBasedClientToken = true;
+
     /**
      * Creates a new instance of the OpenCms session manager.<p>
      */
@@ -976,6 +979,16 @@ public class CmsSessionManager {
     }
 
     /**
+     * Sets whether client tokens should include the IP address.<p>
+     *
+     * @param generateIpBasedClientToken true if client tokens should include the IP address
+     */
+    protected void setGenerateIpBasedClientToken(boolean generateIpBasedClientToken) {
+
+        m_generateIpBasedClientToken = generateIpBasedClientToken;
+    }
+
+    /**
      * Removes all stored session info objects.<p>
      *
      * @throws Exception if something goes wrong
@@ -1002,7 +1015,7 @@ public class CmsSessionManager {
     }
 
     /**
-     * Generates a token based on hashed client ip and user agent.<p>
+     * Generates a token based on the hashed client IP address.<p>
      * Used to prevent session hijacking.<p>
      *
      * @param request the current request
@@ -1021,6 +1034,11 @@ public class CmsSessionManager {
         if ((ip == null) || CmsStringUtil.isEmptyOrWhitespaceOnly(ip)) {
             ip = request.getRemoteAddr();
         }
+
+        if (!m_generateIpBasedClientToken) {
+            ip = "127.0.0.1"; // use localhost
+        }
+
         return String.valueOf(ip.hashCode());
     }
 }

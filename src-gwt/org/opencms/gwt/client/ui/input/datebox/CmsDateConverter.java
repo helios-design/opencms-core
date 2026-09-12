@@ -27,11 +27,14 @@
 
 package org.opencms.gwt.client.ui.input.datebox;
 
+import org.opencms.gwt.client.CmsCoreProvider;
 import org.opencms.gwt.client.Messages;
 
 import java.util.Date;
 
 import com.google.gwt.i18n.client.DateTimeFormat;
+
+import com.google.gwt.i18n.client.TimeZone;
 
 /**
  * This class is an Helper with mostly static methods that convert a given date object
@@ -73,6 +76,11 @@ public final class CmsDateConverter {
 
     /** The formatter for the time format. */
     private static final DateTimeFormat Z_TIME_FORMAT = DateTimeFormat.getFormat(TIME_PATTERN);
+
+    /** Custom formatters with time zone. */
+    private static final DateTimeFormat Z_DATE_TZ_FORMAT = DateTimeFormat.getFormat(DATE_PATTERN + " Z");
+    private static final DateTimeFormat Z_DATETIME_TZ_FORMAT = DateTimeFormat.getFormat(DATETIME_PATTERN + " Z");
+    private static final DateTimeFormat Z_TIME_TZ_FORMAT = DateTimeFormat.getFormat(TIME_PATTERN + " Z");
 
     /**
      * Hiding constructor for final class.<p>
@@ -118,7 +126,12 @@ public final class CmsDateConverter {
         if (date == null) {
             result = "";
         } else {
-            result = Z_DATE_FORMAT.format(date);
+            if (useServerTime()) {
+                result = Z_DATE_FORMAT.format(date, TimeZone.createTimeZone(0));
+            }
+            else {
+                result = Z_DATE_FORMAT.format(date);
+            }
         }
         return result;
     }
@@ -155,6 +168,11 @@ public final class CmsDateConverter {
         Date result;
         try {
             Date timeAsDate = timeFormat.parse(time);
+
+            if (useServerTime()) {
+                timeAsDate = Z_TIME_TZ_FORMAT.parse(time + " +0000");
+            }
+
             result = new Date(date.getYear(), date.getMonth(), date.getDate());
             result.setHours(timeAsDate.getHours());
             result.setMinutes(timeAsDate.getMinutes());
@@ -174,8 +192,12 @@ public final class CmsDateConverter {
      * @return the short time format of a given date
      */
     public static String getTime(Date date) {
-
-        return Z_TIME_FORMAT.format(date);
+        if (useServerTime()) {
+            return Z_TIME_FORMAT.format(date, TimeZone.createTimeZone(0));
+        }
+        else {
+            return Z_TIME_FORMAT.format(date);
+        }
     }
 
     /**
@@ -220,6 +242,11 @@ public final class CmsDateConverter {
         Date date = null;
         if (dateText.length() > 0) {
             date = Z_DATETIME_FORMAT_SHORTYEAR.parse(dateText.trim());
+
+            if (useServerTime()) {
+                date = Z_DATETIME_TZ_FORMAT.parse(dateText.trim() + " +0000");
+            }
+
             if (!validateDate(date)) {
                 throw new IllegalArgumentException();
             }
@@ -241,6 +268,10 @@ public final class CmsDateConverter {
             result = "";
         } else {
             result = Z_DATE_FORMAT.format(date);
+
+            if (useServerTime()) {
+                result = Z_DATE_FORMAT.format(date, TimeZone.createTimeZone(0));
+            }
         }
         return result;
     }
@@ -263,6 +294,10 @@ public final class CmsDateConverter {
         Date date = null;
         if (dateText.length() > 0) {
             date = Z_DATE_FORMAT_SHORTYEAR.parse(dateText.trim());
+
+            if (useServerTime()) {
+                date = Z_DATE_TZ_FORMAT.parse(dateText.trim() + " +0000");
+            }
         }
         return date;
     }
@@ -281,6 +316,10 @@ public final class CmsDateConverter {
             result = "";
         } else {
             result = Z_DATETIME_FORMAT.format(date);
+
+            if (useServerTime()) {
+                result = Z_DATETIME_FORMAT.format(date, TimeZone.createTimeZone(0));
+            }
         }
         return result;
     }
@@ -344,4 +383,24 @@ public final class CmsDateConverter {
                                                            }
                                                            return true;
                                                            }-*/;
+
+    /**
+     * Gets the server time offset in hours used by the date box.<p>
+     *
+     * @return the configured server time offset in hours
+     */
+    static int getServerTimeOffsetHours() {
+
+        return CmsCoreProvider.get().getDateBoxServerTimeOffset();
+    }
+
+    /**
+     * Returns whether the date box should use server time.<p>
+     *
+     * @return true if the date box should use server time
+     */
+    static boolean useServerTime() {
+
+        return CmsCoreProvider.get().isDateBoxUseServerTime();
+    }
 }

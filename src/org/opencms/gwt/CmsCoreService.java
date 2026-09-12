@@ -1353,6 +1353,8 @@ public class CmsCoreService extends CmsGwtService implements I_CmsCoreService {
         tinyMCEData.setLink(tinyMCE);
         data.setTinymce(tinyMCEData);
         data.setMaxLocaleButtons(OpenCms.getWorkplaceManager().getEditorMaxLocaleButtons());
+        data.setDateBoxUseServerTime(OpenCms.getSystemInfo().isDateBoxUseServerTime());
+        data.setDateBoxServerTimeOffset(OpenCms.getSystemInfo().getDateBoxServerTimeOffset());
         return data;
     }
 

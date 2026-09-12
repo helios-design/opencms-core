@@ -438,6 +438,23 @@ implements HasValue<Date>, I_CmsFormWidget, I_CmsHasInit, HasKeyPressHandlers, I
             return "INVALID_DATE";
         }
         String result = String.valueOf(getValue().getTime());
+
+        if (CmsDateConverter.useServerTime()) {
+            try {
+                long time = Long.parseLong(result);
+
+                // Calendar can not be used in GWT here.
+                long offsetMillis = CmsDateConverter.getServerTimeOffsetHours() * 60 * 60 * 1000;
+                // convert
+                long convertedTime = time - offsetMillis;
+                result = "" + convertedTime;
+
+            } catch (NumberFormatException e) {
+                // if the String value is none long number make the field empty
+                result = "INVALID_DATE";
+            }
+        }
+
         return result;
     }
 
@@ -623,9 +640,18 @@ implements HasValue<Date>, I_CmsFormWidget, I_CmsHasInit, HasKeyPressHandlers, I
         if (!CmsStringUtil.isEmpty(value)) {
             try {
                 long time = Long.parseLong(value);
-                Date date = new Date(time);
-                m_oldValue = date;
-                setValue(date);
+
+                if (CmsDateConverter.useServerTime()) {
+                    // Calendar can not be used in GWT here.
+                    long offsetMillis = CmsDateConverter.getServerTimeOffsetHours() * 60 * 60 * 1000;
+                    // convert
+                    long convertedTime = time + offsetMillis;
+                    String timeValue = "" + convertedTime;
+                    time = Long.parseLong(timeValue);
+                }
+
+                m_oldValue = new Date(time);
+                setValue(new Date(time));
             } catch (NumberFormatException e) {
                 // if the String value is none long number make the field empty
                 setValue(null);

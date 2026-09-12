@@ -257,6 +257,12 @@ public class CmsCoreData implements IsSerializable {
     /** The category base folder. */
     private String m_categoryBaseFolder;
 
+    /** The date box server time offset in hours. */
+    private int m_dateBoxServerTimeOffset = -7;
+
+    /** Flag to control whether date box widgets should use server time. */
+    private boolean m_dateBoxUseServerTime = true;
+
     /** The XML content editor back-link URL. */
     private String m_contentEditorBacklinkUrl;
 
@@ -390,6 +396,8 @@ public class CmsCoreData implements IsSerializable {
             clone.m_warnWhenEditingReusedElement);
         setTinymce(clone.getTinymce());
         setMaxLocaleButtons(clone.m_maxLocaleButtons);
+        setDateBoxServerTimeOffset(clone.getDateBoxServerTimeOffset());
+        setDateBoxUseServerTime(clone.isDateBoxUseServerTime());
     }
 
     /**
@@ -551,6 +559,16 @@ public class CmsCoreData implements IsSerializable {
     public String getDefaultWorkplaceLink() {
 
         return m_defaultWorkplaceLink;
+    }
+
+    /**
+     * Gets the date box server time offset in hours.<p>
+     *
+     * @return the date box server time offset in hours
+     */
+    public int getDateBoxServerTimeOffset() {
+
+        return m_dateBoxServerTimeOffset;
     }
 
     /**
@@ -791,6 +809,16 @@ public class CmsCoreData implements IsSerializable {
     }
 
     /**
+     * Returns whether date box widgets should use server time.<p>
+     *
+     * @return true if date box widgets should use server time
+     */
+    public boolean isDateBoxUseServerTime() {
+
+        return m_dateBoxUseServerTime;
+    }
+
+    /**
      * Returns the show editor help flag.<p>
      *
      * @return the show editor help flag
@@ -839,6 +867,26 @@ public class CmsCoreData implements IsSerializable {
     public void setMaxLocaleButtons(int maxLocaleButtons) {
 
         m_maxLocaleButtons = maxLocaleButtons;
+    }
+
+    /**
+     * Sets the date box server time offset in hours.<p>
+     *
+     * @param dateBoxServerTimeOffset the date box server time offset in hours
+     */
+    public void setDateBoxServerTimeOffset(int dateBoxServerTimeOffset) {
+
+        m_dateBoxServerTimeOffset = dateBoxServerTimeOffset;
+    }
+
+    /**
+     * Sets whether date box widgets should use server time.<p>
+     *
+     * @param dateBoxUseServerTime true if date box widgets should use server time
+     */
+    public void setDateBoxUseServerTime(boolean dateBoxUseServerTime) {
+
+        m_dateBoxUseServerTime = dateBoxUseServerTime;
     }
 
     /**

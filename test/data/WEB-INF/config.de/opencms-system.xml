@@ -14,6 +14,8 @@
 				<locale>en</locale>
 			</localesdefault>
 			<timezone>GMT+01:00</timezone>
+			<datebox-use-server-time>true</datebox-use-server-time>
+			<datebox-server-time-offset>-7</datebox-server-time-offset>
 		</internationalization>
 		<mail>
 			<mailfrom>nobody@nowhere.com</mailfrom>
@@ -102,6 +104,7 @@
 		</publishmanager>
 		<session-storageprovider
 			class="org.opencms.main.CmsDefaultSessionStorageProvider" />
+		<session-client-token-ip>true</session-client-token-ip>
 		<permissionhandler class="org.opencms.security.CmsDefaultPermissionHandler" />
 		<servletcontainer-settings mode="auto" />
 		<ade>

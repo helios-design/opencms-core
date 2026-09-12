@@ -304,6 +304,12 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The node name for the device selector node. */
     public static final String N_DEVICESELECTOR = "device-selector";
 
+    /** Node name for the date box server time offset. */
+    public static final String N_DATEBOX_SERVER_TIME_OFFSET = "datebox-server-time-offset";
+
+    /** Node name for the date box server time flag. */
+    public static final String N_DATEBOX_USE_SERVER_TIME = "datebox-use-server-time";
+
     /** The node name for the digest type. */
     public static final String N_DIGESTTYPE = "digest-type";
 
@@ -511,6 +517,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The node name for the session-storageprovider node. */
     public static final String N_SESSION_STORAGEPROVIDER = "session-storageprovider";
 
+    /** Node name for the IP based client token setting. */
+    public static final String N_SESSION_CLIENT_TOKEN_IP = "session-client-token-ip";
+
     /** Node name for the shell server options. */
     public static final String N_SHELL_SERVER = "shell-server";
 
@@ -656,6 +665,12 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The configured OpenCms default users and groups. */
     private CmsDefaultUsers m_cmsDefaultUsers;
 
+    /** The date box server time offset in hours. */
+    private int m_dateBoxServerTimeOffset = -7;
+
+    /** Flag to control whether the date box should use server time. */
+    private boolean m_dateBoxUseServerTime = true;
+
     /** The flex cache configuration object. */
     private CmsFlexCacheConfiguration m_cmsFlexCacheConfiguration;
 
@@ -744,6 +759,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
     /** The configured session storage provider class name. */
     private String m_sessionStorageProvider;
+
+    /** Flag to control whether session client tokens should include the client IP address. */
+    private boolean m_sessionClientTokenIp = true;
 
     /** The shell server options. */
     private CmsRemoteShellConfiguration m_shellServerOptions;
@@ -907,6 +925,14 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         // add time zone rule
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_I18N + "/" + N_TIMEZONE, "setTimeZone", 0);
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_I18N + "/" + N_REUSE_ELEMENTS, "setReuseElements", 0);
+        digester.addCallMethod(
+            "*/" + N_SYSTEM + "/" + N_I18N + "/" + N_DATEBOX_USE_SERVER_TIME,
+            "setDateBoxUseServerTime",
+            0);
+        digester.addCallMethod(
+            "*/" + N_SYSTEM + "/" + N_I18N + "/" + N_DATEBOX_SERVER_TIME_OFFSET,
+            "setDateBoxServerTimeOffset",
+            0);
 
         // add version history rules
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_VERSIONHISTORY, "setHistorySettings", 3);
@@ -1303,6 +1329,8 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_SESSION_STORAGEPROVIDER, "setSessionStorageProvider", 1);
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_SESSION_STORAGEPROVIDER, 0, A_CLASS);
 
+        digester.addCallMethod("*/" + N_SYSTEM + "/" + N_SESSION_CLIENT_TOKEN_IP, "setSessionClientTokenIp", 0);
+
         // add rule for permission handler
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_PERMISSIONHANDLER, "setPermissionHandler", 1);
         digester.addCallParam("*/" + N_SYSTEM + "/" + N_PERMISSIONHANDLER, 0, A_CLASS);
@@ -1453,6 +1481,8 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
             m_historyEnabled = OpenCms.getSystemInfo().isHistoryEnabled();
             m_historyVersions = OpenCms.getSystemInfo().getHistoryVersions();
             m_historyVersionsAfterDeletion = OpenCms.getSystemInfo().getHistoryVersionsAfterDeletion();
+            m_dateBoxUseServerTime = OpenCms.getSystemInfo().isDateBoxUseServerTime();
+            m_dateBoxServerTimeOffset = OpenCms.getSystemInfo().getDateBoxServerTimeOffset();
             // m_resourceInitHandlers instance must be the one from configuration
             // m_requestHandlers instance must be the one from configuration
             m_loginManager = OpenCms.getLoginManager();
@@ -1479,6 +1509,8 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         if (null != m_localeManager.getReuseElementsStr()) {
             i18nElement.addElement(N_REUSE_ELEMENTS).setText(m_localeManager.getReuseElementsStr());
         }
+        i18nElement.addElement(N_DATEBOX_USE_SERVER_TIME).setText(String.valueOf(isDateBoxUseServerTime()));
+        i18nElement.addElement(N_DATEBOX_SERVER_TIME_OFFSET).setText(String.valueOf(getDateBoxServerTimeOffset()));
 
         // mail nodes
         Element mailElement = systemElement.addElement(N_MAIL);
@@ -1801,6 +1833,8 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
             sessionStorageProviderElem.addAttribute(A_CLASS, m_sessionStorageProvider);
         }
 
+        systemElement.addElement(N_SESSION_CLIENT_TOKEN_IP).setText(String.valueOf(isSessionClientTokenIp()));
+
         // permission handler
         if (m_permissionHandler != null) {
             Element permissionHandlerElem = systemElement.addElement(N_PERMISSIONHANDLER);
@@ -2079,6 +2113,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public String getDefaultContentEncoding() {
 
         return m_defaultContentEncoding;
+    }
+
+    /**
+     * Gets the date box server time offset in hours.<p>
+     *
+     * @return the date box server time offset in hours
+     */
+    public int getDateBoxServerTimeOffset() {
+
+        return m_dateBoxServerTimeOffset;
     }
 
     /**
@@ -2368,6 +2412,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
+     * Returns whether the session client token should include the client IP address.<p>
+     *
+     * @return true if the client IP address should be included
+     */
+    public boolean isSessionClientTokenIp() {
+
+        return m_sessionClientTokenIp;
+    }
+
+    /**
      * Returns the shell server options.<p>
      *
      * @return the shell server options
@@ -2505,6 +2559,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public boolean isHistoryEnabled() {
 
         return m_historyEnabled;
+    }
+
+    /**
+     * Returns whether date box widgets should use server time.<p>
+     *
+     * @return true if date box widgets should use server time
+     */
+    public boolean isDateBoxUseServerTime() {
+
+        return m_dateBoxUseServerTime;
     }
 
     /**
@@ -2668,6 +2732,30 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public void setDefaultContentEncoding(String defaultContentEncoding) {
 
         m_defaultContentEncoding = defaultContentEncoding;
+    }
+
+    /**
+     * Sets the date box server time offset in hours.<p>
+     *
+     * @param offsetHours the date box server time offset in hours
+     */
+    public void setDateBoxServerTimeOffset(String offsetHours) {
+
+        try {
+            m_dateBoxServerTimeOffset = Integer.parseInt(offsetHours);
+        } catch (NumberFormatException e) {
+            m_dateBoxServerTimeOffset = -7;
+        }
+    }
+
+    /**
+     * Sets whether date box widgets should use server time.<p>
+     *
+     * @param useServerTime true if date box widgets should use server time
+     */
+    public void setDateBoxUseServerTime(String useServerTime) {
+
+        m_dateBoxUseServerTime = Boolean.parseBoolean(useServerTime);
     }
 
     /**
@@ -2987,6 +3075,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public void setSessionStorageProvider(String sessionStorageProviderClass) {
 
         m_sessionStorageProvider = sessionStorageProviderClass;
+    }
+
+    /**
+     * Sets whether the session client token should include the client IP address.<p>
+     *
+     * @param sessionClientTokenIp the configured value
+     */
+    public void setSessionClientTokenIp(String sessionClientTokenIp) {
+
+        m_sessionClientTokenIp = Boolean.parseBoolean(sessionClientTokenIp);
     }
 
     /**

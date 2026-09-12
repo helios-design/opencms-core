@@ -1607,6 +1607,8 @@ public final class OpenCmsCore {
         // set HTTP authentication settings
         getSystemInfo().setHttpAuthenticationSettings(systemConfiguration.getHttpAuthenticationSettings());
         getSystemInfo().setRestrictDetailContents(systemConfiguration.isRestrictDetailContents());
+        getSystemInfo().setDateBoxUseServerTime(systemConfiguration.isDateBoxUseServerTime());
+        getSystemInfo().setDateBoxServerTimeOffset(systemConfiguration.getDateBoxServerTimeOffset());
 
         // set content notification settings
         getSystemInfo().setNotificationTime(systemConfiguration.getNotificationTime());
@@ -1837,6 +1839,7 @@ public final class OpenCmsCore {
             // initialize the session manager
             m_sessionManager.initialize(sessionStorageProvider, initCmsObject(adminCms));
             m_sessionManager.setUserSessionMode(systemConfiguration.getUserSessionMode(true));
+            m_sessionManager.setGenerateIpBasedClientToken(systemConfiguration.isSessionClientTokenIp());
 
             // initialize the subscription manager
             m_subscriptionManager.setSecurityManager(m_securityManager);
