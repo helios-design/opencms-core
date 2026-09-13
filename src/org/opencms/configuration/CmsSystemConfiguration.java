@@ -84,6 +84,7 @@ import java.util.Map;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.commons.digester3.CallMethodRule;
 import org.apache.commons.digester3.Digester;
 import org.apache.commons.digester3.NodeCreateRule;
 import org.apache.commons.digester3.Rule;
@@ -925,14 +926,12 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         // add time zone rule
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_I18N + "/" + N_TIMEZONE, "setTimeZone", 0);
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_I18N + "/" + N_REUSE_ELEMENTS, "setReuseElements", 0);
-        digester.addCallMethod(
+        digester.addRule(
             "*/" + N_SYSTEM + "/" + N_I18N + "/" + N_DATEBOX_USE_SERVER_TIME,
-            "setDateBoxUseServerTime",
-            0);
-        digester.addCallMethod(
+            new CallMethodRule(1, "setDateBoxUseServerTime", 0));
+        digester.addRule(
             "*/" + N_SYSTEM + "/" + N_I18N + "/" + N_DATEBOX_SERVER_TIME_OFFSET,
-            "setDateBoxServerTimeOffset",
-            0);
+            new CallMethodRule(1, "setDateBoxServerTimeOffset", 0));
 
         // add version history rules
         digester.addCallMethod("*/" + N_SYSTEM + "/" + N_VERSIONHISTORY, "setHistorySettings", 3);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="warn">
     <Properties>
-        <Property name="exceptionFormat">%xEx{full}{filters(org.apache.catalina,org.apache.tomcat,org.eclipse.jetty,org.apache.coyote,org.apache.jasper)}</Property>
+        <Property name="exceptionFormat">%ex{full}</Property>
     </Properties>
 	<Appenders>
 	    <Console name="CONSOLE" target="SYSTEM_OUT">
