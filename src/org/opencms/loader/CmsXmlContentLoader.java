@@ -34,7 +34,7 @@ import org.opencms.main.CmsException;
 import org.opencms.xml.I_CmsXmlDocument;
 import org.opencms.xml.content.CmsXmlContentFactory;
 
-import javax.servlet.ServletRequest;
+import jakarta.servlet.ServletRequest;
 
 /**
  * OpenCms loader for resources of type <code>{@link org.opencms.file.types.CmsResourceTypeXmlContent}</code>.<p>
@@ -66,21 +66,21 @@ public class CmsXmlContentLoader extends A_CmsXmlDocumentLoader {
     }
 
     /**
-     * @see org.opencms.loader.A_CmsXmlDocumentLoader#unmarshalXmlDocument(org.opencms.file.CmsObject, org.opencms.file.CmsResource, javax.servlet.ServletRequest)
-     */
-    @Override
-    protected I_CmsXmlDocument unmarshalXmlDocument(CmsObject cms, CmsResource resource, ServletRequest req)
-    throws CmsException {
-
-        return CmsXmlContentFactory.unmarshal(cms, resource, req);
-    }
-
-    /**
      * @see org.opencms.loader.A_CmsXmlDocumentLoader#getTemplatePropertyDefinition()
      */
     @Override
     protected String getTemplatePropertyDefinition() {
 
         return CmsPropertyDefinition.PROPERTY_TEMPLATE_ELEMENTS;
+    }
+
+    /**
+     * @see org.opencms.loader.A_CmsXmlDocumentLoader#unmarshalXmlDocument(org.opencms.file.CmsObject, org.opencms.file.CmsResource, jakarta.servlet.ServletRequest)
+     */
+    @Override
+    protected I_CmsXmlDocument unmarshalXmlDocument(CmsObject cms, CmsResource resource, ServletRequest req)
+    throws CmsException {
+
+        return CmsXmlContentFactory.unmarshal(cms, resource, req);
     }
 }

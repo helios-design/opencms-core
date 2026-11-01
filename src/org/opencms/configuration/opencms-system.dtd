@@ -28,8 +28,10 @@
 	defaultcontentencoding,
 	memorymonitor?,
 	flexcache,
+	imagecache?,
 	http-authentication,
 	resultcache,
+	storedcontentinfocache?,
 	content-notification?,
 	authorizationhandler?,
 	api-authorizations?,
@@ -47,6 +49,7 @@
 	credentials-resolver?,
 	secret-store?,
 	publish-list-remove-mode?,
+	edit-marker-handler?,
 	detail-page-handler?,
 	restrict-detail-contents?,
 	shell-server?,
@@ -339,6 +342,47 @@
 
 
 <!--
+# Image cache retention and maintenance configuration.
+#
+# If this optional element is absent, the legacy RFS image cache behavior applies.
+# FS and S3 image caches require this element. Durations use the ISO-8601
+# duration format, for example P60D, PT1H or PT5M. Max age is required for
+# modes fixed and renew-on-use. Renewal window and jitter are additionally
+# required for mode renew-on-use. All three time values must be absent for
+# mode external, which delegates retention completely to another system.
+-->
+<!ELEMENT imagecache (retention, cleanup?, rfs?, fs?, s3?)>
+
+<!ELEMENT retention EMPTY>
+<!ATTLIST retention
+	mode (external|fixed|renew-on-use) #REQUIRED
+	max-age CDATA #IMPLIED
+	renewal-window CDATA #IMPLIED
+	renewal-jitter CDATA #IMPLIED>
+
+<!ELEMENT cleanup EMPTY>
+<!ATTLIST cleanup
+	max-deletes-per-run CDATA #IMPLIED
+	max-runtime CDATA #IMPLIED>
+
+<!ELEMENT rfs EMPTY>
+<!ATTLIST rfs
+	touch-minimum-interval CDATA #IMPLIED>
+
+<!ELEMENT fs EMPTY>
+<!ATTLIST fs
+	touch-concurrency CDATA #IMPLIED>
+
+<!ELEMENT s3 EMPTY>
+<!ATTLIST s3
+	delete-batch-size CDATA #IMPLIED
+	delete-concurrency CDATA #IMPLIED
+	copy-concurrency CDATA #IMPLIED
+	max-copies-per-second CDATA #IMPLIED
+	renewal-queue-capacity CDATA #IMPLIED>
+
+
+<!--
 #
 # HTTP basic authentication settings.
 -->
@@ -455,6 +499,36 @@
 # The size of the driver manager's cache for roles.
 -->
 <!ELEMENT size-roles (#PCDATA)>
+
+<!--
+# Stored content info cache settings.
+# This cache avoids repeated database lookups for storage metadata during direct blob delivery.
+-->
+<!ELEMENT storedcontentinfocache (
+	storedcontentinfocache-factory,
+	storedcontentinfocache-enabled,
+	storedcontentinfocache-size,
+	storedcontentinfocache-ttl)>
+
+<!--
+# The factory class used to create the stored content info cache.
+-->
+<!ELEMENT storedcontentinfocache-factory (#PCDATA)>
+
+<!--
+# Enables or disables the stored content info cache.
+-->
+<!ELEMENT storedcontentinfocache-enabled (#PCDATA)>
+
+<!--
+# The maximum number of stored content info entries.
+-->
+<!ELEMENT storedcontentinfocache-size (#PCDATA)>
+
+<!--
+# The time to live for stored content info entries in seconds.
+-->
+<!ELEMENT storedcontentinfocache-ttl (#PCDATA)>
 
 <!--
 # Content notification settings.
@@ -662,10 +736,16 @@
 <!ATTLIST letsencrypt trigger (siteConfig|webserverThread) #IMPLIED>
 
 <!--
-# The detail page handler class with parameters. 
--->  
+# The detail page handler class with parameters.
+-->
 <!ELEMENT detail-page-handler (param*) >
 <!ATTLIST detail-page-handler class CDATA #REQUIRED >
+
+<!--
+# Optional element marker handler class with parameters; emits per-element markers during rendering.
+-->
+<!ELEMENT edit-marker-handler (param*) >
+<!ATTLIST edit-marker-handler class CDATA #IMPLIED >
 
 
 <!ELEMENT userdata (userdata-domain*) >

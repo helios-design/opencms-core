@@ -47,12 +47,12 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides methods for the change property values dialog.<p>
@@ -354,7 +354,7 @@ public class CmsPropertyChange extends CmsDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {
@@ -451,6 +451,16 @@ public class CmsPropertyChange extends CmsDialog {
     }
 
     /**
+     * Sets the changed resources that were affected by the property change action.<p>
+     *
+     * @param changedResources the changed resources that were affected by the property change action
+     */
+    private void setChangedResources(List changedResources) {
+
+        m_changedResources = changedResources;
+    }
+
+    /**
      * Sets the given property with the given value to the given resource
      * (potentially recursiv) if it has not been set before.<p>
      *
@@ -470,7 +480,8 @@ public class CmsPropertyChange extends CmsDialog {
         String resourceRootPath,
         String propertyDefinition,
         String newValue,
-        boolean recursive) throws CmsException, CmsVfsException {
+        boolean recursive)
+    throws CmsException, CmsVfsException {
 
         CmsObject cms = getCms();
 
@@ -500,16 +511,6 @@ public class CmsPropertyChange extends CmsDialog {
             }
         }
         return changedResources;
-    }
-
-    /**
-     * Sets the changed resources that were affected by the property change action.<p>
-     *
-     * @param changedResources the changed resources that were affected by the property change action
-     */
-    private void setChangedResources(List changedResources) {
-
-        m_changedResources = changedResources;
     }
 
     /**

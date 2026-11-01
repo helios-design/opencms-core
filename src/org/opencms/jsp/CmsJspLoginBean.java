@@ -43,12 +43,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Date;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides convenient wrappers useful to create user login pages.<p>
@@ -56,7 +56,7 @@ import org.apache.commons.logging.Log;
  * Initialize this bean at the beginning of your JSP like this:
  * <pre>
  * &lt;jsp:useBean id="cmslogin" class="org.opencms.jsp.CmsJspLoginBean"&gt;
- * &lt% cmslogin.init(pageContext, request, response); %&gt;
+ * &lt;% cmslogin.init(pageContext, request, response); %&gt;
  * &lt;/jsp:useBean&gt;
  * </pre>
  * <p>
@@ -365,7 +365,7 @@ public class CmsJspLoginBean extends CmsJspActionElement {
         if (m_loginException == null) {
             try {
                 URI uriObj = new URI(redirectUri);
-                if (uriObj.getScheme() != null) {
+                if ((uriObj.getScheme() != null) || redirectUri.trim().startsWith("//")) {
                     LOG.warn("Absolute URL not allowed as redirect URI: " + redirectUri);
                     return;
                 }

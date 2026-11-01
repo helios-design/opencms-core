@@ -19,7 +19,7 @@ writeProperty '/system/workplace/locales/de/' 'locale' 'de'
 		<description><![CDATA[<p>This module contains the German language localization files for the OpenCms workplace.</p>
 <p>Install this module if you want to use the german version of the OpenCms Workplace.</p>
 <p><i>&copy; by Alkacon Software GmbH &amp; Co. KG (https://www.alkacon.com).</i></p>]]></description>
-		<version>21.0.0</version>
+		<version>22.0.0</version>
 		<authorname><![CDATA[Alkacon Software GmbH &amp; Co. KG]]></authorname>
 		<authoremail><![CDATA[info@alkacon.com]]></authoremail>
 		<datecreated>Mon, 27 Jun 2005 08:00:00 GMT</datecreated>
@@ -483,6 +483,33 @@ writeProperty '/system/workplace/locales/de/' 'locale' 'de'
 			<uuidstructure>1310ada9-700c-11db-85b5-e907d95948a7</uuidstructure>
 			<uuidresource>e9cabaca-d436-11d9-9cff-555ce86a55d5</uuidresource>
 			<datecreated>Mon, 27 Jun 2005 08:00:00 GMT</datecreated>
+			<flags>0</flags>
+			<properties>
+				<property>
+					<name>content-encoding</name>
+					<value><![CDATA[ISO-8859-1]]></value>
+				</property>
+			</properties>
+			<relations/>
+			<accesscontrol/>
+		</file>
+		<file>
+			<destination>system/workplace/locales/de/messages/org/opencms/db/storage</destination>
+			<type>folder</type>
+			<uuidstructure>10e9ac15-8d07-459e-84d2-4ef24eea1cf9</uuidstructure>
+			<datecreated>Tue, 12 May 2026 17:36:00 GMT</datecreated>
+			<flags>0</flags>
+			<properties/>
+			<relations/>
+			<accesscontrol/>
+		</file>
+		<file>
+			<source>system/workplace/locales/de/messages/org/opencms/db/storage/messages_de.properties</source>
+			<destination>system/workplace/locales/de/messages/org/opencms/db/storage/messages_de.properties</destination>
+			<type>plain</type>
+			<uuidstructure>a2508550-0603-44e8-a56d-0c3cd951a52b</uuidstructure>
+			<uuidresource>e87ad0ea-40ae-4036-aec8-9625727c4177</uuidresource>
+			<datecreated>Tue, 12 May 2026 17:36:00 GMT</datecreated>
 			<flags>0</flags>
 			<properties>
 				<property>

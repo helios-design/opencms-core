@@ -38,6 +38,8 @@ import org.opencms.db.CmsSubscriptionManager;
 import org.opencms.db.I_CmsDbContextFactory;
 import org.opencms.flex.CmsFlexCacheConfiguration;
 import org.opencms.i18n.CmsLocaleManager;
+import org.opencms.jsp.CmsDefaultElementMarker;
+import org.opencms.jsp.I_CmsElementMarker;
 import org.opencms.jsp.userdata.CmsUserDataRequestManager;
 import org.opencms.letsencrypt.CmsLetsEncryptConfiguration;
 import org.opencms.mail.CmsMailHost;
@@ -207,6 +209,15 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The attribute name for the deleted node. */
     public static final String A_DELETED = "deleted";
 
+    /** The copy concurrency attribute. */
+    public static final String A_COPY_CONCURRENCY = "copy-concurrency";
+
+    /** The delete batch size attribute. */
+    public static final String A_DELETE_BATCH_SIZE = "delete-batch-size";
+
+    /** The delete concurrency attribute. */
+    public static final String A_DELETE_CONCURRENCY = "delete-concurrency";
+
     /** The "error" attribute. */
     public static final String A_ERROR = "error";
 
@@ -225,6 +236,18 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The "mailfrom" attribute. */
     public static final String A_MAILFROM = "mailfrom";
 
+    /** The maximum cache entry age attribute. */
+    public static final String A_MAX_AGE = "max-age";
+
+    /** The maximum number of copies per second attribute. */
+    public static final String A_MAX_COPIES_PER_SECOND = "max-copies-per-second";
+
+    /** The maximum number of deletes per run attribute. */
+    public static final String A_MAX_DELETES_PER_RUN = "max-deletes-per-run";
+
+    /** The maximum runtime attribute. */
+    public static final String A_MAX_RUNTIME = "max-runtime";
+
     /** The "maxvisited" attribute. */
     public static final String A_MAXVISITED = "maxvisited";
 
@@ -233,10 +256,27 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
     /** The "online" attribute. */
     public static final String A_ONLINE = "online";
+
     /** The "poolname" attribute. */
     public static final String A_POOLNAME = "poolname";
+
+    /** The renewal jitter attribute. */
+    public static final String A_RENEWAL_JITTER = "renewal-jitter";
+
+    /** The renewal queue capacity attribute. */
+    public static final String A_RENEWAL_QUEUE_CAPACITY = "renewal-queue-capacity";
+
+    /** The renewal window attribute. */
+    public static final String A_RENEWAL_WINDOW = "renewal-window";
+
     /** The "security" attribute. */
     public static final String A_SECURITY = "security";
+
+    /** The touch concurrency attribute. */
+    public static final String A_TOUCH_CONCURRENCY = "touch-concurrency";
+
+    /** The minimum touch interval attribute. */
+    public static final String A_TOUCH_MINIMUM_INTERVAL = "touch-minimum-interval";
 
     /** The name of the DTD for this configuration. */
     public static final String CONFIGURATION_DTD_NAME = "opencms-system.dtd";
@@ -281,6 +321,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The configuration node name. */
     public static final String N_CONFIGURATION = "configuration";
 
+    /** The image cache cleanup node name. */
+    public static final String N_CLEANUP = "cleanup";
+
     /** The containerpages node name. */
     public static final String N_CONTAINERPAGES = "containerpages";
 
@@ -301,6 +344,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
     /** The node name for the detail page handler. */
     public static final String N_DETAIL_PAGE_HANDLER = "detail-page-handler";
+
+    /** The node name for the edit marker handler. */
+    public static final String N_EDIT_MARKER_HANDLER = "edit-marker-handler";
 
     /** The node name for the device selector node. */
     public static final String N_DEVICESELECTOR = "device-selector";
@@ -347,6 +393,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The node name for the form-based node. */
     public static final String N_FORM_BASED = "form-based";
 
+    /** The file system image cache node name. */
+    public static final String N_FS = "fs";
+
     /** The node name for the group-administrators node. */
     public static final String N_GROUP_ADMINISTRATORS = "group-administrators";
 
@@ -373,6 +422,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
     /** The node name for the internationalization node. */
     public static final String N_I18N = "internationalization";
+
+    /** The image cache node name. */
+    public static final String N_IMAGECACHE = "imagecache";
 
     /** The name of the class to generate cache keys. */
     public static final String N_KEYGENERATOR = "keygenerator";
@@ -493,6 +545,30 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
     /** the result cache node. */
     public static final String N_RESULTCACHE = "resultcache";
+
+    /** The image cache retention node name. */
+    public static final String N_RETENTION = "retention";
+
+    /** The RFS image cache node name. */
+    public static final String N_RFS = "rfs";
+
+    /** The S3 image cache node name. */
+    public static final String N_S3 = "s3";
+
+    /** The stored content info cache node. */
+    public static final String N_STOREDCONTENTINFOCACHE = "storedcontentinfocache";
+
+    /** The stored content info cache enabled node. */
+    public static final String N_STOREDCONTENTINFOCACHE_ENABLED = "storedcontentinfocache-enabled";
+
+    /** The stored content info cache factory node. */
+    public static final String N_STOREDCONTENTINFOCACHE_FACTORY = "storedcontentinfocache-factory";
+
+    /** The stored content info cache size node. */
+    public static final String N_STOREDCONTENTINFOCACHE_SIZE = "storedcontentinfocache-size";
+
+    /** The stored content info cache TTL node. */
+    public static final String N_STOREDCONTENTINFOCACHE_TTL = "storedcontentinfocache-ttl";
 
     /** Node name for the element reuse mode. */
     public static final String N_REUSE_ELEMENTS = "reuse-elements";
@@ -663,6 +739,12 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     /** The settings of the memory monitor. */
     private CmsCacheSettings m_cacheSettings;
 
+    /** The image cache retention and maintenance configuration. */
+    private CmsImageCacheConfiguration m_imageCacheConfiguration = CmsImageCacheConfiguration.createLegacyConfiguration();
+
+    /** The stored content info cache configuration. */
+    private CmsStoredContentInfoCacheConfiguration m_storedContentInfoCacheConfiguration = new CmsStoredContentInfoCacheConfiguration();
+
     /** The configured OpenCms default users and groups. */
     private CmsDefaultUsers m_cmsDefaultUsers;
 
@@ -689,6 +771,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
     /** The detail page handler. */
     private I_CmsDetailPageHandler m_detailPageHandler = new CmsDefaultDetailPageHandler();
+
+    /** The element marker handler (no-op default until configured). */
+    private I_CmsElementMarker m_elementMarker = new CmsDefaultElementMarker();
 
     /** The configured OpenCms event manager. */
     private CmsEventManager m_eventManager;
@@ -1190,6 +1275,29 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         // set the FlexCacheConfiguration initialized once before
         digester.addSetNext("*/" + N_SYSTEM + "/" + N_FLEXCACHE, "setCmsFlexCacheConfiguration");
 
+        // add image cache retention and maintenance configuration rules
+        String imageCachePath = "*/" + N_SYSTEM + "/" + N_IMAGECACHE;
+        digester.addObjectCreate(imageCachePath, CmsImageCacheConfiguration.class);
+        digester.addCallMethod(imageCachePath + "/" + N_RETENTION, "setRetention", 4);
+        digester.addCallParam(imageCachePath + "/" + N_RETENTION, 0, A_MODE);
+        digester.addCallParam(imageCachePath + "/" + N_RETENTION, 1, A_MAX_AGE);
+        digester.addCallParam(imageCachePath + "/" + N_RETENTION, 2, A_RENEWAL_WINDOW);
+        digester.addCallParam(imageCachePath + "/" + N_RETENTION, 3, A_RENEWAL_JITTER);
+        digester.addCallMethod(imageCachePath + "/" + N_CLEANUP, "setCleanup", 2);
+        digester.addCallParam(imageCachePath + "/" + N_CLEANUP, 0, A_MAX_DELETES_PER_RUN);
+        digester.addCallParam(imageCachePath + "/" + N_CLEANUP, 1, A_MAX_RUNTIME);
+        digester.addCallMethod(imageCachePath + "/" + N_RFS, "setRfs", 1);
+        digester.addCallParam(imageCachePath + "/" + N_RFS, 0, A_TOUCH_MINIMUM_INTERVAL);
+        digester.addCallMethod(imageCachePath + "/" + N_FS, "setFs", 1);
+        digester.addCallParam(imageCachePath + "/" + N_FS, 0, A_TOUCH_CONCURRENCY);
+        digester.addCallMethod(imageCachePath + "/" + N_S3, "setS3", 5);
+        digester.addCallParam(imageCachePath + "/" + N_S3, 0, A_DELETE_BATCH_SIZE);
+        digester.addCallParam(imageCachePath + "/" + N_S3, 1, A_DELETE_CONCURRENCY);
+        digester.addCallParam(imageCachePath + "/" + N_S3, 2, A_COPY_CONCURRENCY);
+        digester.addCallParam(imageCachePath + "/" + N_S3, 3, A_MAX_COPIES_PER_SECOND);
+        digester.addCallParam(imageCachePath + "/" + N_S3, 4, A_RENEWAL_QUEUE_CAPACITY);
+        digester.addSetNext(imageCachePath, "setImageCacheConfiguration");
+
         // add http basic authentication rules
         digester.addObjectCreate("*/" + N_SYSTEM + "/" + N_HTTP_AUTHENTICATION, CmsHttpAuthenticationSettings.class);
         digester.addCallMethod(
@@ -1248,6 +1356,23 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
             "setContainerPageOnlineSize",
             0);
         digester.addSetNext("*/" + N_SYSTEM + "/" + N_RESULTCACHE, "setCacheSettings");
+
+        // stored content info cache rules
+        digester.addObjectCreate(
+            "*/" + N_SYSTEM + "/" + N_STOREDCONTENTINFOCACHE,
+            CmsStoredContentInfoCacheConfiguration.class);
+        digester.addCallMethod("*/" + N_SYSTEM + "/" + N_STOREDCONTENTINFOCACHE, "initialize", 4);
+        digester.addCallParam(
+            "*/" + N_SYSTEM + "/" + N_STOREDCONTENTINFOCACHE + "/" + N_STOREDCONTENTINFOCACHE_FACTORY,
+            0);
+        digester.addCallParam(
+            "*/" + N_SYSTEM + "/" + N_STOREDCONTENTINFOCACHE + "/" + N_STOREDCONTENTINFOCACHE_ENABLED,
+            1);
+        digester.addCallParam(
+            "*/" + N_SYSTEM + "/" + N_STOREDCONTENTINFOCACHE + "/" + N_STOREDCONTENTINFOCACHE_SIZE,
+            2);
+        digester.addCallParam("*/" + N_SYSTEM + "/" + N_STOREDCONTENTINFOCACHE + "/" + N_STOREDCONTENTINFOCACHE_TTL, 3);
+        digester.addSetNext("*/" + N_SYSTEM + "/" + N_STOREDCONTENTINFOCACHE, "setStoredContentInfoCacheConfiguration");
 
         // set the notification time
         digester.addCallMethod(
@@ -1459,6 +1584,10 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         String detailPageHandlerPath = "*/" + N_SYSTEM + "/" + N_DETAIL_PAGE_HANDLER;
         digester.addObjectCreate(detailPageHandlerPath, CmsDefaultDetailPageHandler.class.getName(), A_CLASS);
         digester.addSetNext(detailPageHandlerPath, "setDetailPageHandler");
+
+        String editMarkerHandlerPath = "*/" + N_SYSTEM + "/" + N_EDIT_MARKER_HANDLER;
+        digester.addObjectCreate(editMarkerHandlerPath, CmsDefaultElementMarker.class.getName(), A_CLASS);
+        digester.addSetNext(editMarkerHandlerPath, "setElementMarker");
 
         String userdataPath = "*/" + N_SYSTEM + "/" + CmsUserDataRequestManager.N_USERDATA;
         CmsUserDataRequestManager.addDigesterRules(digester, userdataPath);
@@ -1739,6 +1868,9 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
                 m_cmsFlexCacheConfiguration.getDeviceSelectorConfiguration());
         }
 
+        // create optional <imagecache> node
+        m_imageCacheConfiguration.appendToXml(systemElement);
+
         // create <http-authentication> node
         Element httpAuthenticationElement = systemElement.addElement(N_HTTP_AUTHENTICATION);
         httpAuthenticationElement.addElement(N_BROWSER_BASED).setText(
@@ -1777,6 +1909,17 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         }
         cacheElement.addElement(N_SIZE_ACLS).setText(Integer.toString(m_cacheSettings.getAclCacheSize()));
         cacheElement.addElement(N_SIZE_PERMISSIONS).setText(Integer.toString(m_cacheSettings.getPermissionCacheSize()));
+
+        // stored content info cache settings
+        Element storedContentInfoCacheElement = systemElement.addElement(N_STOREDCONTENTINFOCACHE);
+        storedContentInfoCacheElement.addElement(N_STOREDCONTENTINFOCACHE_FACTORY).setText(
+            m_storedContentInfoCacheConfiguration.getFactoryClass());
+        storedContentInfoCacheElement.addElement(N_STOREDCONTENTINFOCACHE_ENABLED).setText(
+            Boolean.toString(m_storedContentInfoCacheConfiguration.isEnabled()));
+        storedContentInfoCacheElement.addElement(N_STOREDCONTENTINFOCACHE_SIZE).setText(
+            Integer.toString(m_storedContentInfoCacheConfiguration.getSize()));
+        storedContentInfoCacheElement.addElement(N_STOREDCONTENTINFOCACHE_TTL).setText(
+            Long.toString(m_storedContentInfoCacheConfiguration.getTtl()));
 
         // content notification settings
         if ((m_notificationTime != null) || (m_notificationProject != null)) {
@@ -1936,6 +2079,18 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
         if (m_publishListRemoveMode != null) {
             systemElement.addElement(N_PUBLISH_LIST_REMOVE_MODE).addAttribute(A_MODE, m_publishListRemoveMode);
+        }
+
+        if ((m_elementMarker != null) && !(m_elementMarker instanceof CmsDefaultElementMarker)) {
+            Element markerElement = systemElement.addElement(N_EDIT_MARKER_HANDLER).addAttribute(
+                A_CLASS,
+                m_elementMarker.getClass().getName());
+            CmsParameterConfiguration config = m_elementMarker.getConfiguration();
+            if (config != null) {
+                for (String key : config.keySet()) {
+                    markerElement.addElement(N_PARAM).addAttribute(A_NAME, key).addText(config.get(key));
+                }
+            }
         }
 
         if (m_detailPageHandler != null) {
@@ -2143,6 +2298,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
+     * Gets the configured element marker handler (a no-op default when none is configured).
+     *
+     * @return the element marker handler
+     */
+    public I_CmsElementMarker getElementMarker() {
+
+        return m_elementMarker;
+    }
+
+    /**
      * Returns the configured OpenCms event manager instance.<p>
      *
      * @return the configured OpenCms event manager instance
@@ -2188,6 +2353,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public CmsHttpAuthenticationSettings getHttpAuthenticationSettings() {
 
         return m_httpAuthenticationSettings;
+    }
+
+    /**
+     * Returns the image cache retention and maintenance configuration.<p>
+     *
+     * @return the image cache configuration
+     */
+    public CmsImageCacheConfiguration getImageCacheConfiguration() {
+
+        return m_imageCacheConfiguration;
     }
 
     /**
@@ -2428,6 +2603,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public CmsRemoteShellConfiguration getShellServerOptions() {
 
         return m_shellServerOptions;
+    }
+
+    /**
+     * Returns the stored content info cache configuration.<p>
+     *
+     * @return the stored content info cache configuration
+     */
+    public CmsStoredContentInfoCacheConfiguration getStoredContentInfoCacheConfiguration() {
+
+        return m_storedContentInfoCacheConfiguration;
     }
 
     /**
@@ -2769,6 +2954,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
+     * Sets the element marker handler (called from the digester when <code>edit-marker-handler</code> is configured).
+     *
+     * @param marker the element marker handler
+     */
+    public void setElementMarker(I_CmsElementMarker marker) {
+
+        m_elementMarker = marker;
+    }
+
+    /**
      * VFS version history settings are set here.<p>
      *
      * @param historyEnabled if true the history is enabled
@@ -2798,6 +2993,24 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public void setHttpAuthenticationSettings(CmsHttpAuthenticationSettings httpAuthenticationSettings) {
 
         m_httpAuthenticationSettings = httpAuthenticationSettings;
+    }
+
+    /**
+     * Sets the image cache retention and maintenance configuration.<p>
+     *
+     * @param configuration the image cache configuration
+     */
+    public void setImageCacheConfiguration(CmsImageCacheConfiguration configuration) {
+
+        configuration.validate();
+        m_imageCacheConfiguration = configuration;
+        if (CmsLog.INIT.isInfoEnabled()) {
+            CmsLog.INIT.info(
+                Messages.get().getBundle().key(
+                    Messages.INIT_IMAGECACHE_CONFIG_2,
+                    configuration.getRetentionMode().getXmlValue(),
+                    configuration.getPolicyFingerprint()));
+        }
     }
 
     /**
@@ -3102,6 +3315,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
         }
         m_shellServerOptions = new CmsRemoteShellConfiguration(Boolean.parseBoolean(enabled), port);
 
+    }
+
+    /**
+     * Sets the stored content info cache configuration.<p>
+     *
+     * @param configuration the stored content info cache configuration
+     */
+    public void setStoredContentInfoCacheConfiguration(CmsStoredContentInfoCacheConfiguration configuration) {
+
+        m_storedContentInfoCacheConfiguration = configuration;
     }
 
     /**

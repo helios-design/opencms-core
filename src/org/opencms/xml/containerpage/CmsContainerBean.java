@@ -60,7 +60,7 @@ public class CmsContainerBean {
     /**
      * Indicates whether this container not nested,
      * or in case of a detail only container page the starting point of a detail only container hierarchy.
-     **/
+     */
     private boolean m_isRootContainer;
 
     /** The maximal number of elements in the container. */
@@ -90,7 +90,7 @@ public class CmsContainerBean {
      * @param isRootContainer <code>true</code> if this container not nested
      * @param maxElements the maximal number of elements in the container
      * @param elements the elements
-     **/
+     */
     public CmsContainerBean(
         String name,
         String type,
@@ -117,7 +117,7 @@ public class CmsContainerBean {
      * @param parentInstanceId the parent instance id
      * @param isRootContainer <code>true</code> if this container not nested
      * @param elements the elements
-     **/
+     */
     public CmsContainerBean(
         String name,
         String type,
@@ -245,6 +245,31 @@ public class CmsContainerBean {
     public String getParentInstanceId() {
 
         return m_parentInstanceId;
+    }
+
+    /**
+     * Names of nested containers are prefixed by the parent instance id.
+     * This method returns the container name without that prefix, i.e.,
+     * the name as specified in the &lt;cms:container&gt; tag.
+     *
+     * For root containers, name and simple name are identical.
+     *
+     * IMPORTANT: Simple names may be identically for multiple containers on a container page.
+     *
+     * @return the name of the container as specified by the cms:container tag.
+     */
+    public String getSimpleName() {
+
+        if (isNestedContainer()) {
+            String prefix = getParentInstanceId() + "-";
+            // the name of a nested container is normally prefixed with the parent instance id,
+            // but we have to check this explicitly since inconsistent data (e.g. on detail only
+            // container pages) may violate this assumption and lead to a StringIndexOutOfBoundsException
+            if (getName().startsWith(prefix)) {
+                return getName().substring(prefix.length());
+            }
+        }
+        return getName();
     }
 
     /**

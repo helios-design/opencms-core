@@ -62,6 +62,7 @@ import org.opencms.gwt.client.ui.input.form.CmsInfoBoxFormFieldPanel;
 import org.opencms.gwt.client.ui.input.form.CmsWidgetFactoryRegistry;
 import org.opencms.gwt.client.ui.input.form.I_CmsFormSubmitHandler;
 import org.opencms.gwt.client.ui.input.form.I_CmsFormWidgetMultiFactory;
+import org.opencms.gwt.client.ui.input.form.I_CmsHasPlaceholder;
 import org.opencms.gwt.client.util.CmsDomUtil;
 import org.opencms.gwt.shared.CmsAdditionalInfoBean;
 import org.opencms.gwt.shared.CmsCoreData.AdeContext;
@@ -580,6 +581,11 @@ public class CmsElementSettingsDialog extends CmsFormDialog implements I_CmsForm
                 this,
                 Collections.<String, String> emptyMap(),
                 false);
+            if (currentField.getWidget() instanceof I_CmsHasPlaceholder) {
+                if (!CmsStringUtil.isEmpty(propConfig.getPlaceholder())) {
+                    ((I_CmsHasPlaceholder)currentField.getWidget()).setPlaceholder(propConfig.getPlaceholder());
+                }
+            }
             formFields.put(propConfig.getName(), currentField);
 
         }
@@ -806,28 +812,28 @@ public class CmsElementSettingsDialog extends CmsFormDialog implements I_CmsForm
      * @param cssContent the CSS snippet
      */
     private native void ensureInlineCss(String formatterId, String cssContent)/*-{
-		var styles = $wnd.document.styleSheets;
-		for (var i = 0; i < styles.length; i++) {
-			// IE uses the owningElement property
-			var styleNode = styles[i].owningElement ? styles[i].owningElement
-					: styles[i].ownerNode;
-			if (styleNode != null && styleNode.rel == formatterId) {
-				// inline css is present
-				return;
-			}
-		}
-		// include inline css into head
-		var headID = $wnd.document.getElementsByTagName("head")[0];
-		var cssNode = $wnd.document.createElement('style');
-		cssNode.type = 'text/css';
-		cssNode.rel = formatterId;
-		if (cssNode.styleSheet) {
-			// in case of IE
-			cssNode.styleSheet.cssText = cssContent;
-		} else {
-			// otherwise
-			cssNode.appendChild(document.createTextNode(cssContent));
-		}
-		headID.appendChild(cssNode);
+        var styles = $wnd.document.styleSheets;
+        for (var i = 0; i < styles.length; i++) {
+            // IE uses the owningElement property
+            var styleNode = styles[i].owningElement ? styles[i].owningElement
+                    : styles[i].ownerNode;
+            if (styleNode != null && styleNode.rel == formatterId) {
+                // inline css is present
+                return;
+            }
+        }
+        // include inline css into head
+        var headID = $wnd.document.getElementsByTagName("head")[0];
+        var cssNode = $wnd.document.createElement('style');
+        cssNode.type = 'text/css';
+        cssNode.rel = formatterId;
+        if (cssNode.styleSheet) {
+            // in case of IE
+            cssNode.styleSheet.cssText = cssContent;
+        } else {
+            // otherwise
+            cssNode.appendChild(document.createTextNode(cssContent));
+        }
+        headID.appendChild(cssNode);
     }-*/;
 }

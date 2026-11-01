@@ -44,11 +44,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Dialog to edit an email to send in the administration view.<p>
@@ -98,8 +98,9 @@ public class CmsSendEmailDialog extends A_CmsMessageDialog {
 
         if (CmsStringUtil.isEmptyOrWhitespaceOnly(m_msgInfo.getTo())) {
             setCommitErrors(
-                Collections.singletonList((Throwable)new CmsIllegalStateException(
-                    Messages.get().container(Messages.ERR_NO_SELECTED_USER_WITH_EMAIL_0))));
+                Collections.singletonList(
+                    (Throwable)new CmsIllegalStateException(
+                        Messages.get().container(Messages.ERR_NO_SELECTED_USER_WITH_EMAIL_0))));
             return;
         }
         try {
@@ -235,8 +236,9 @@ public class CmsSendEmailDialog extends A_CmsMessageDialog {
         }
         if (users.isEmpty()) {
             setCommitErrors(
-                Collections.singletonList((Throwable)new CmsIllegalStateException(
-                    Messages.get().container(Messages.ERR_NO_SELECTED_USER_WITH_EMAIL_0))));
+                Collections.singletonList(
+                    (Throwable)new CmsIllegalStateException(
+                        Messages.get().container(Messages.ERR_NO_SELECTED_USER_WITH_EMAIL_0))));
             return "";
         }
         StringBuffer result = new StringBuffer(256);

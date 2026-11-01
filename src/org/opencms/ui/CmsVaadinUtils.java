@@ -78,8 +78,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.logging.Log;
 
@@ -122,6 +120,8 @@ import com.vaadin.v7.ui.Label;
 import com.vaadin.v7.ui.OptionGroup;
 import com.vaadin.v7.ui.Table;
 import com.vaadin.v7.ui.VerticalLayout;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Vaadin utility functions.<p>
@@ -1452,7 +1452,7 @@ public final class CmsVaadinUtils {
 
     /**
      * Reads the given design and resolves the given macros and localizations.<p>
-    
+     *
      * @param component the component whose design to read
      * @param designStream stream to read the design from
      * @param messages the message bundle to use for localization in the design (may be null)

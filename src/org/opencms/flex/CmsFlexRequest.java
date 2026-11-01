@@ -37,7 +37,6 @@ import org.opencms.main.I_CmsEventListener;
 import org.opencms.main.OpenCms;
 import org.opencms.security.CmsRole;
 import org.opencms.staticexport.CmsLinkManager;
-import org.opencms.util.CmsCollectionsGenericWrapper;
 import org.opencms.util.CmsParameterEscaper;
 import org.opencms.util.CmsRequestUtil;
 
@@ -51,13 +50,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-
 import org.apache.commons.logging.Log;
 
 import com.google.common.collect.Sets;
+
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 
 /**
  * Wrapper class for a HttpServletRequest.<p>
@@ -139,7 +138,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
         m_elementUri = cms.getSitePath(m_controller.getCmsResource());
         m_elementUriSiteRoot = cms.getRequestContext().getSiteRoot();
         m_includeCalls = new Vector<String>();
-        m_parameters = CmsCollectionsGenericWrapper.map(req.getParameterMap());
+        m_parameters = CmsRequestUtil.getParameterMap(req);
         m_attributes = CmsRequestUtil.getAtrributeMap(req);
         m_isOnline = cms.getRequestContext().getCurrentProject().isOnlineProject();
         String[] params = req.getParameterValues(PARAMETER_FLEX);
@@ -245,7 +244,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
         m_canCache = m_controller.getCurrentRequest().isCacheable();
         m_doRecompile = m_controller.getCurrentRequest().isDoRecompile();
         m_includeCalls = m_controller.getCurrentRequest().getCmsIncludeCalls();
-        m_parameters = CmsCollectionsGenericWrapper.map(req.getParameterMap());
+        m_parameters = CmsRequestUtil.getParameterMap(req);
         m_attributes = CmsRequestUtil.getAtrributeMap(req);
         if (LOG.isDebugEnabled()) {
             LOG.debug(Messages.get().getBundle().key(Messages.LOG_FLEXREQUEST_REUSING_FLEX_REQUEST_1, m_elementUri));
@@ -362,7 +361,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      *
      * @return the value of the specified request attribute
      *
-     * @see javax.servlet.ServletRequest#getAttribute(java.lang.String)
+     * @see jakarta.servlet.ServletRequest#getAttribute(java.lang.String)
      */
     @Override
     public Object getAttribute(String name) {
@@ -390,7 +389,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      *
      * @return the names of all defined request attributes for this request
      *
-     * @see javax.servlet.ServletRequest#getAttributeNames
+     * @see jakarta.servlet.ServletRequest#getAttributeNames
      */
     @Override
     public Enumeration<String> getAttributeNames() {
@@ -449,7 +448,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      *
      * @return the value of the specified request parameter
      *
-     * @see javax.servlet.ServletRequest#getParameter(java.lang.String)
+     * @see jakarta.servlet.ServletRequest#getParameter(java.lang.String)
      */
     @Override
     public String getParameter(String name) {
@@ -486,7 +485,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      * @return a <code>Map</code> containing parameter names as keys
      *  and parameter values as map values
      *
-     * @see javax.servlet.ServletRequest#getParameterMap()
+     * @see jakarta.servlet.ServletRequest#getParameterMap()
      */
     @Override
     public Map<String, String[]> getParameterMap() {
@@ -501,7 +500,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      *
      * @return the names of all defined request parameters for this request
      *
-     * @see javax.servlet.ServletRequest#getParameterNames()
+     * @see jakarta.servlet.ServletRequest#getParameterNames()
      */
     @Override
     public Enumeration<String> getParameterNames() {
@@ -520,7 +519,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      * @return the defined values for the specified request parameter, if any;
      *          <code>null</code> otherwise
      *
-     * @see javax.servlet.ServletRequest#getParameterValues(java.lang.String)
+     * @see jakarta.servlet.ServletRequest#getParameterValues(java.lang.String)
      */
     @Override
     public String[] getParameterValues(String name) {
@@ -541,7 +540,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      * @return a special RequestDispatcher that allows access to VFS resources
      */
     @Override
-    public javax.servlet.RequestDispatcher getRequestDispatcher(String target) {
+    public jakarta.servlet.RequestDispatcher getRequestDispatcher(String target) {
 
         String absolutUri = CmsLinkManager.getAbsoluteUri(target, m_controller.getCurrentRequest().getElementUri());
         return new CmsFlexRequestDispatcher(
@@ -580,7 +579,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      *
      * @return a faked URI that will point to the wrapped target in the VFS
      *
-     * @see javax.servlet.http.HttpServletRequest#getRequestURI()
+     * @see jakarta.servlet.http.HttpServletRequest#getRequestURI()
      */
     @Override
     public String getRequestURI() {
@@ -601,7 +600,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      *
      * @return a faked URL that will point to the included target in the VFS
      *
-     * @see javax.servlet.http.HttpServletRequest#getRequestURL()
+     * @see jakarta.servlet.http.HttpServletRequest#getRequestURL()
      */
     @Override
     public StringBuffer getRequestURL() {
@@ -625,7 +624,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
      * instead of using our request dispatcher, so missing RFS JSP pages are not requested to
      * OpenCms and the dispatcher is unable to load the included/forwarded JSP file.<p>
      *
-     * @see javax.servlet.http.HttpServletRequestWrapper#getServletPath()
+     * @see jakarta.servlet.http.HttpServletRequestWrapper#getServletPath()
      */
     @Override
     public String getServletPath() {
@@ -694,7 +693,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
     }
 
     /**
-     * @see javax.servlet.ServletRequestWrapper#removeAttribute(java.lang.String)
+     * @see jakarta.servlet.ServletRequestWrapper#removeAttribute(java.lang.String)
      */
     @Override
     public void removeAttribute(String name) {
@@ -704,7 +703,7 @@ public class CmsFlexRequest extends HttpServletRequestWrapper {
     }
 
     /**
-     * @see javax.servlet.ServletRequestWrapper#setAttribute(java.lang.String, java.lang.Object)
+     * @see jakarta.servlet.ServletRequestWrapper#setAttribute(java.lang.String, java.lang.Object)
      */
     @Override
     public void setAttribute(String name, Object value) {

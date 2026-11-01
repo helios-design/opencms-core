@@ -40,12 +40,12 @@ import org.opencms.workplace.CmsWorkplaceSettings;
 
 import java.util.Iterator;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
+import org.apache.commons.fileupload2.core.DiskFileItem;
 
-import org.apache.commons.fileupload.FileItem;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * The replace resource dialog handles the replacement of a single VFS file.<p>
@@ -97,8 +97,8 @@ public class CmsReplace extends CmsDialog {
 
         try {
             // get the file item from the multipart request
-            Iterator<FileItem> i = getMultiPartFileItems().iterator();
-            FileItem fi = null;
+            Iterator<DiskFileItem> i = getMultiPartFileItems().iterator();
+            DiskFileItem fi = null;
             while (i.hasNext()) {
                 fi = i.next();
                 if (fi.getName() != null) {
@@ -149,7 +149,7 @@ public class CmsReplace extends CmsDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

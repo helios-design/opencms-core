@@ -39,14 +39,14 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Contains configuration for access restrictions to JSON handler.
@@ -151,7 +151,6 @@ public class CmsJsonAccessPolicy {
      * @return the access policy
      *
      * @throws DocumentException if parsing fails
-    
      */
     public static CmsJsonAccessPolicy parse(InputStream stream) throws DocumentException {
 

@@ -27,6 +27,7 @@
 
 package org.opencms.file;
 
+import org.opencms.db.CmsPublishedResource;
 import org.opencms.file.CmsResource.CmsResourceDeleteMode;
 import org.opencms.file.types.CmsResourceTypeFolder;
 import org.opencms.file.types.CmsResourceTypePlain;
@@ -34,9 +35,9 @@ import org.opencms.main.CmsException;
 import org.opencms.main.CmsIllegalArgumentException;
 import org.opencms.main.CmsRuntimeException;
 import org.opencms.main.OpenCms;
-import org.opencms.test.OpenCmsTestCase;
-import org.opencms.test.OpenCmsTestProperties;
 import org.opencms.test.OpenCmsTestResourceConfigurableFilter;
+import org.opencms.test.OpenCmsTestRunner;
+import org.opencms.util.CmsUUID;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -48,14 +49,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import junit.extensions.TestSetup;
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 
 /**
  * Unit tests for move/delete/publish operations.<p>
  */
-public class TestMoveRename3 extends OpenCmsTestCase {
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class TestMoveRename3 extends OpenCmsTestRunner {
 
     /**
      * Container for structure entries.<p>
@@ -134,48 +139,13 @@ public class TestMoveRename3 extends OpenCmsTestCase {
     }
 
     /**
-     * Default JUnit constructor.<p>
-     *
-     * @param arg0 JUnit parameters
+     * @see org.opencms.test.OpenCmsTestRunner#$openCmsSetUp(org.junit.jupiter.api.TestInfo)
      */
-    public TestMoveRename3(String arg0) {
+    @Override
+    @BeforeAll
+    public void $openCmsSetUp(TestInfo testInfo) {
 
-        super(arg0);
-    }
-
-    /**
-     * Test suite for this test class.<p>
-     *
-     * @return the test suite
-     */
-    public static Test suite() {
-
-        OpenCmsTestProperties.initialize(org.opencms.test.AllTests.TEST_PROPERTIES_PATH);
-
-        TestSuite suite = new TestSuite();
-        suite.setName(TestMoveRename3.class.getName());
-
-        suite.addTest(new TestMoveRename3("testDeleteUndeleteMovedFile"));
-        suite.addTest(new TestMoveRename3("testDeleteUndeletePublishMovedFile"));
-        suite.addTest(new TestMoveRename3("testMovedFileParent"));
-        suite.addTest(new TestMoveRename3("testRenameToExistingFolder"));
-        suite.addTest(new TestMoveRename3("testRenameToInvalidName"));
-        TestSetup wrapper = new TestSetup(suite) {
-
-            @Override
-            protected void setUp() {
-
-                setupOpenCms("simpletest", "/");
-            }
-
-            @Override
-            protected void tearDown() {
-
-                removeOpenCms();
-            }
-        };
-
-        return wrapper;
+        setupOpenCms(testInfo, "simpletest", "/");
     }
 
     /**
@@ -183,6 +153,8 @@ public class TestMoveRename3 extends OpenCmsTestCase {
      *
      * @throws Exception in case the test fails
      */
+    @Test
+    @Order(1)
     public void testDeleteUndeleteMovedFile() throws Exception {
 
         CmsObject cms = getCmsObject();
@@ -228,6 +200,8 @@ public class TestMoveRename3 extends OpenCmsTestCase {
      *
      * @throws Throwable if something goes wrong
      */
+    @Test
+    @Order(2)
     public void testDeleteUndeletePublishMovedFile() throws Throwable {
 
         CmsObject cms = getCmsObject();
@@ -269,6 +243,8 @@ public class TestMoveRename3 extends OpenCmsTestCase {
      *
      * @throws Throwable if something goes wrong
      */
+    @Test
+    @Order(3)
     public void testMovedFileParent() throws Throwable {
 
         CmsObject cms = getCmsObject();
@@ -320,10 +296,59 @@ public class TestMoveRename3 extends OpenCmsTestCase {
     }
 
     /**
+     * Tests the publish history paths for resources moved out of a deleted folder.<p>
+     *
+     * @throws Exception if something goes wrong
+     */
+    @Test
+    @Order(4)
+    public void testMovedResourcesInDeletedFolderPublishHistoryPaths() throws Exception {
+
+        CmsObject cms = getCmsObject();
+
+        echo("Testing publish history paths for resources moved out of a deleted folder");
+        String sourceFolder = "/folderOneD";
+        String destinationFolder = "/folderTwoD";
+        String movedFolderName = "moved";
+        String testFileName = "testD.txt";
+        String sourceMovedFolder = sourceFolder + "/" + movedFolderName;
+        String sourceFile = sourceMovedFolder + "/" + testFileName;
+        String destinationMovedFolder = destinationFolder + "/" + movedFolderName;
+
+        cms.createResource(sourceFolder, CmsResourceTypeFolder.getStaticTypeId());
+        cms.createResource(sourceMovedFolder, CmsResourceTypeFolder.getStaticTypeId());
+        cms.createResource(sourceFile, CmsResourceTypePlain.getStaticTypeId());
+        OpenCms.getPublishManager().publishResource(cms, sourceFolder);
+        OpenCms.getPublishManager().waitWhileRunning();
+
+        // fileBeforeMove is read in Offline project, but its path and id at this point are the same as in the Online project.
+        CmsResource fileBeforeMove = cms.readResource(sourceFile);
+        cms.createResource(destinationFolder, CmsResourceTypeFolder.getStaticTypeId());
+        cms.lockResource(sourceMovedFolder);
+        cms.moveResource(sourceMovedFolder, destinationMovedFolder);
+        cms.unlockResource(destinationMovedFolder);
+
+        cms.lockResource(sourceFolder);
+        cms.deleteResource(sourceFolder, CmsResource.DELETE_PRESERVE_SIBLINGS);
+        cms.unlockResource(sourceFolder);
+        CmsUUID publishHistoryId = OpenCms.getPublishManager().publishResource(cms, sourceFolder);
+        OpenCms.getPublishManager().waitWhileRunning();
+
+        for (CmsPublishedResource publishedResource : cms.readPublishedResources(publishHistoryId)) {
+            if (publishedResource.getStructureId().equals(fileBeforeMove.getStructureId())) {
+                assertEquals(CmsResource.STATE_DELETED, publishedResource.getState());
+                assertEquals(fileBeforeMove.getRootPath(), publishedResource.getRootPath());
+            }
+        }
+    }
+
+    /**
      * Test that renaming a folder fails if a folder with the same name already exists.<p>
      *
      * @throws Exception in case the test fails
      */
+    @Test
+    @Order(5)
     public void testRenameToExistingFolder() throws Exception {
 
         CmsObject cms = getCmsObject();
@@ -339,7 +364,7 @@ public class TestMoveRename3 extends OpenCmsTestCase {
         } catch (CmsException e) {
             exception = e;
         }
-        assertNotNull("renaming a folder to an already existing one should fail!", exception);
+        assertNotNull(exception, "renaming a folder to an already existing one should fail!");
     }
 
     /**
@@ -347,6 +372,8 @@ public class TestMoveRename3 extends OpenCmsTestCase {
      *
      * @throws Exception in case the test fails
      */
+    @Test
+    @Order(6)
     public void testRenameToInvalidName() throws Exception {
 
         CmsObject cms = getCmsObject();
@@ -361,7 +388,7 @@ public class TestMoveRename3 extends OpenCmsTestCase {
         } catch (CmsIllegalArgumentException e) {
             exception = e;
         }
-        assertNotNull("Renaming to an invalid name should fail!", exception);
+        assertNotNull(exception, "Renaming to an invalid name should fail!");
     }
 
     /**

@@ -92,16 +92,16 @@ import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.JspWriter;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
 
 import com.google.common.collect.Maps;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.jsp.JspWriter;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A java bean as a controller for the OpenCms setup wizard.<p>
@@ -2000,19 +2000,19 @@ public class CmsSetupBean implements I_CmsShellCommands {
                     || provider.equals(DB2_PROVIDER)
                     || provider.equals(MSSQL_PROVIDER)
                     || provider.equals(POSTGRESQL_PROVIDER)) {
-                        if (!conStr.endsWith("/")) {
-                            conStr += "/";
-                        }
-                        conStr += database;
-                    } else if (provider.equals(AS400_PROVIDER)) {
-                        if (conStr.endsWith("/")) {
-                            conStr = conStr.substring(0, conStr.length() - 1);
-                        }
-                        if (!conStr.endsWith(";")) {
-                            conStr += ";";
-                        }
-                        conStr += "libraries='" + database + "'";
+                    if (!conStr.endsWith("/")) {
+                        conStr += "/";
                     }
+                    conStr += database;
+                } else if (provider.equals(AS400_PROVIDER)) {
+                    if (conStr.endsWith("/")) {
+                        conStr = conStr.substring(0, conStr.length() - 1);
+                    }
+                    if (!conStr.endsWith(";")) {
+                        conStr += ";";
+                    }
+                    conStr += "libraries='" + database + "'";
+                }
                 setDbWorkConStr(conStr);
                 if (provider.equals(POSTGRESQL_PROVIDER)) {
                     setDb(database);

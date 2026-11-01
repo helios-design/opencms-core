@@ -42,9 +42,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.JspWriter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.JspWriter;
 
 /**
  * Provides a GUI for the configuration file comparison dialog.<p>
@@ -65,6 +65,31 @@ public abstract class A_CmsDiffViewDialog extends CmsDialog {
 
         super(jsp);
         setParamStyle(STYLE_NEW);
+    }
+
+    /**
+     * Returns the html code for a deactivated empfasized button.<p>
+     *
+     * @param name the label of the button
+     * @param iconPath the path to the icon
+     *
+     * @return the html code for a deactivated empfasized button
+     */
+    public String deactivatedEmphasizedButtonHtml(String name, String iconPath) {
+
+        StringBuffer result = new StringBuffer();
+        result.append(
+            "<span style='vertical-align:middle;'><img style='width:20px;height:20px;display:inline;vertical-align:middle;text-decoration:none;' src=\'");
+        result.append(CmsWorkplace.getSkinUri());
+        result.append(iconPath);
+        result.append("\' alt=\'");
+        result.append(name);
+        result.append("\' title=\'");
+        result.append(name);
+        result.append("\'>&nbsp;<b>");
+        result.append(name);
+        result.append("</b></span>");
+        return result.toString();
     }
 
     /**
@@ -118,32 +143,26 @@ public abstract class A_CmsDiffViewDialog extends CmsDialog {
     }
 
     /**
-     * Returns the html code for the buttons 'show only differences' and 'show everything'.<p>
+     * Returns the mode.<p>
      *
-     * @return the html code for the buttons 'show only differences' and 'show everything'
+     * @return the mode
      */
-    String getDiffOnlyButtonsHtml() {
+    public CmsDiffViewMode getMode() {
 
-        StringBuffer result = new StringBuffer();
-        if (!getOriginalSource().equals(getCopySource())) {
-            String onClick1 = "javascript:document.forms['diff-form'].mode.value = '";
-            String onClick2 = "javascript:document.forms['diff-form'].mode.value = '";
-            onClick1 += CmsDiffViewMode.ALL;
-            onClick2 += CmsDiffViewMode.DIFF_ONLY;
-            onClick1 += "'; document.forms['diff-form'].submit();";
-            onClick2 += "'; document.forms['diff-form'].submit();";
-            result.append(
-                getTwoButtonsHtml(
-                    CmsDiffViewMode.DIFF_ONLY.getName().key(getLocale()),
-                    CmsDiffViewMode.ALL.getName().key(getLocale()),
-                    onClick1,
-                    onClick2,
-                    getMode() == CmsDiffViewMode.DIFF_ONLY));
-        } else {
-            // display all text, if there are no differences
-            setMode(CmsDiffViewMode.ALL);
+        return m_mode;
+    }
+
+    /**
+     * Returns the parameter value for the Mode.<p>
+     *
+     * @return the parameter value for the Mode
+     */
+    public String getParamMode() {
+
+        if (m_mode == null) {
+            return null;
         }
-        return result.toString();
+        return m_mode.getMode();
     }
 
     /**
@@ -198,54 +217,6 @@ public abstract class A_CmsDiffViewDialog extends CmsDialog {
     }
 
     /**
-     * Returns the html code for a deactivated empfasized button.<p>
-     *
-     * @param name the label of the button
-     * @param iconPath the path to the icon
-     *
-     * @return the html code for a deactivated empfasized button
-     */
-    public String deactivatedEmphasizedButtonHtml(String name, String iconPath) {
-
-        StringBuffer result = new StringBuffer();
-        result.append(
-            "<span style='vertical-align:middle;'><img style='width:20px;height:20px;display:inline;vertical-align:middle;text-decoration:none;' src=\'");
-        result.append(CmsWorkplace.getSkinUri());
-        result.append(iconPath);
-        result.append("\' alt=\'");
-        result.append(name);
-        result.append("\' title=\'");
-        result.append(name);
-        result.append("\'>&nbsp;<b>");
-        result.append(name);
-        result.append("</b></span>");
-        return result.toString();
-    }
-
-    /**
-     * Returns the mode.<p>
-     *
-     * @return the mode
-     */
-    public CmsDiffViewMode getMode() {
-
-        return m_mode;
-    }
-
-    /**
-     * Returns the parameter value for the Mode.<p>
-     *
-     * @return the parameter value for the Mode
-     */
-    public String getParamMode() {
-
-        if (m_mode == null) {
-            return null;
-        }
-        return m_mode.getMode();
-    }
-
-    /**
      * Sets the mode.<p>
      *
      * @param mode the mode to set
@@ -287,7 +258,7 @@ public abstract class A_CmsDiffViewDialog extends CmsDialog {
     protected abstract String getOriginalSource();
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {
@@ -337,6 +308,35 @@ public abstract class A_CmsDiffViewDialog extends CmsDialog {
                 line = "&nbsp;";
             }
             result.append("<div class=\"df-unc\"><span class=\"df-unc\">").append(line).append("</span></div>\n");
+        }
+        return result.toString();
+    }
+
+    /**
+     * Returns the html code for the buttons 'show only differences' and 'show everything'.<p>
+     *
+     * @return the html code for the buttons 'show only differences' and 'show everything'
+     */
+    String getDiffOnlyButtonsHtml() {
+
+        StringBuffer result = new StringBuffer();
+        if (!getOriginalSource().equals(getCopySource())) {
+            String onClick1 = "javascript:document.forms['diff-form'].mode.value = '";
+            String onClick2 = "javascript:document.forms['diff-form'].mode.value = '";
+            onClick1 += CmsDiffViewMode.ALL;
+            onClick2 += CmsDiffViewMode.DIFF_ONLY;
+            onClick1 += "'; document.forms['diff-form'].submit();";
+            onClick2 += "'; document.forms['diff-form'].submit();";
+            result.append(
+                getTwoButtonsHtml(
+                    CmsDiffViewMode.DIFF_ONLY.getName().key(getLocale()),
+                    CmsDiffViewMode.ALL.getName().key(getLocale()),
+                    onClick1,
+                    onClick2,
+                    getMode() == CmsDiffViewMode.DIFF_ONLY));
+        } else {
+            // display all text, if there are no differences
+            setMode(CmsDiffViewMode.ALL);
         }
         return result.toString();
     }

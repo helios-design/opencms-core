@@ -30,6 +30,7 @@ package org.opencms.jsp;
 import org.opencms.file.CmsObject;
 import org.opencms.flex.CmsFlexController;
 import org.opencms.flex.CmsFlexRequest;
+import org.opencms.util.CmsRequestUtil;
 import org.opencms.util.CmsStringUtil;
 
 import java.util.Collections;
@@ -37,8 +38,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.jsp.tagext.TagSupport;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.jsp.tagext.TagSupport;
 
 /**
  * This tag is used to enable parameter escaping for a single Flex Request.<p>
@@ -82,8 +83,8 @@ public class CmsJspTagSecureParams extends TagSupport {
         String replaceInvalid,
         String escapeInvalid) {
 
-        if (request instanceof CmsFlexRequest) {
-            CmsFlexRequest flexRequest = (CmsFlexRequest)request;
+        CmsFlexRequest flexRequest = CmsRequestUtil.getFlexRequest(request);
+        if (flexRequest != null) {
             CmsObject cms = CmsFlexController.getCmsObject(flexRequest);
             List<String> exceptions = Collections.emptyList();
             if (allowXml != null) {
@@ -106,7 +107,7 @@ public class CmsJspTagSecureParams extends TagSupport {
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() {

@@ -52,6 +52,67 @@ import com.google.common.collect.ImmutableList;
  */
 public class CmsSettingConfiguration {
 
+    /**
+     * The shared setting configuration file that defines a setting, for configuration origin discovery:
+     * the file's structure id, whether the matching definition is formatter-specific, and whether it
+     * comes from a sitemap setting override (rather than the formatter's own shared settings).
+     */
+    public static class CmsSettingDefiningFile {
+
+        /** The structure id of the shared setting configuration file. */
+        private final CmsUUID m_fileId;
+
+        /** Whether the matching definition is keyed to the formatter (as opposed to global). */
+        private final boolean m_formatterScoped;
+
+        /** Whether the file is a sitemap setting override (as opposed to a formatter shared setting). */
+        private final boolean m_fromOverride;
+
+        /**
+         * Creates a new instance.<p>
+         *
+         * @param fileId the file structure id
+         * @param formatterScoped whether the matching definition is formatter-specific
+         * @param fromOverride whether the file is a sitemap setting override
+         */
+        public CmsSettingDefiningFile(CmsUUID fileId, boolean formatterScoped, boolean fromOverride) {
+
+            m_fileId = fileId;
+            m_formatterScoped = formatterScoped;
+            m_fromOverride = fromOverride;
+        }
+
+        /**
+         * Gets the structure id of the defining shared setting configuration file.<p>
+         *
+         * @return the file structure id
+         */
+        public CmsUUID getFileId() {
+
+            return m_fileId;
+        }
+
+        /**
+         * Returns whether the matching definition is keyed to the formatter (vs. the global setting).<p>
+         *
+         * @return <code>true</code> if the definition is formatter-specific
+         */
+        public boolean isFormatterScoped() {
+
+            return m_formatterScoped;
+        }
+
+        /**
+         * Returns whether the file is a sitemap setting override (vs. a formatter shared setting).<p>
+         *
+         * @return <code>true</code> if the file is a sitemap setting override
+         */
+        public boolean isFromOverride() {
+
+            return m_fromOverride;
+        }
+    }
+
     /** The logger instance for this class. */
     private static final Log LOG = CmsLog.getLog(CmsSettingConfiguration.class);
 
@@ -119,6 +180,31 @@ public class CmsSettingConfiguration {
     }
 
     /**
+     * Finds the shared setting configuration file that defines the given setting, searching the
+     * sitemap setting overrides first (highest priority) and then the formatter's own shared setting
+     * files, in order of decreasing specificity. Read-only, used for configuration origin discovery.<p>
+     *
+     * @param overrideIds the sitemap setting override file ids in ascending specificity, e.g. from
+     *            {@link org.opencms.ade.configuration.CmsADEConfigData#getSharedSettingOverrides()}
+     * @param settingName the setting name (the property name of the setting)
+     *
+     * @return the file defining the setting, or <code>null</code> if no shared setting file defines it
+     */
+    public CmsSettingDefiningFile findDefiningFile(List<CmsUUID> overrideIds, String settingName) {
+
+        // shared settings are keyed by include name, so resolve the requested setting name back to the
+        // include name the formatter actually references before searching the files
+        String includeName = resolveIncludeName(overrideIds, settingName);
+        // sitemap overrides win over the formatter's own shared settings; within each group the last
+        // entry is the most specific, so search from the most specific downwards
+        CmsSettingDefiningFile fromOverride = findInFiles(overrideIds, includeName, true);
+        if (fromOverride != null) {
+            return fromOverride;
+        }
+        return findInFiles(m_sharedSettingsIdsFromFormatter, includeName, false);
+    }
+
+    /**
      * Gets the setting map by looking up the configured settings' include names in either the shared settings files
      * configured in the formatter configuration, or the override shared settings files whose ids are passed as parameter.
      *
@@ -165,6 +251,36 @@ public class CmsSettingConfiguration {
     }
 
     /**
+     * Searches a list of shared setting files (in ascending specificity) for a definition with the
+     * given include name, most specific file first, preferring a formatter-specific entry over the
+     * global one.<p>
+     *
+     * @param ids the shared setting file ids in ascending specificity
+     * @param includeName the include name of the setting to look for
+     * @param fromOverride whether the files are sitemap setting overrides
+     *
+     * @return the defining file, or <code>null</code>
+     */
+    private CmsSettingDefiningFile findInFiles(List<CmsUUID> ids, String includeName, boolean fromOverride) {
+
+        for (int i = ids.size() - 1; i >= 0; i--) {
+            Map<CmsSharedSettingKey, CmsXmlContentProperty> map = m_sharedSettingConfigsById.get(ids.get(i));
+            if (map == null) {
+                continue;
+            }
+            // the shared setting maps are keyed by (include name, formatter key); match the resolved
+            // include name and prefer a formatter-specific entry over the global one
+            if ((m_formatterKey != null) && map.containsKey(new CmsSharedSettingKey(includeName, m_formatterKey))) {
+                return new CmsSettingDefiningFile(ids.get(i), true, fromOverride);
+            }
+            if (map.containsKey(new CmsSharedSettingKey(includeName, null))) {
+                return new CmsSettingDefiningFile(ids.get(i), false, fromOverride);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Helper method to get a shared setting for this formatter.
      *
      *  <p>Prioritizes shared settings with a formatter key matching this formatter's key.
@@ -190,6 +306,71 @@ public class CmsSettingConfiguration {
         }
         return result;
 
+    }
+
+    /**
+     * Merges a setting listed in the formatter with its matching shared and override definitions, pulling
+     * each field value from the first of [override, formatter, shared] where it is defined.
+     *
+     * @param settingDef the setting definition listed in the formatter
+     * @param includeName the effective include name of the setting definition
+     * @param sharedSettingDefinitions the shared setting definitions referenced from the formatter
+     * @param overrideSettingDefinitions the sitemap override setting definitions active in the current context
+     *
+     * @return the merged setting definition
+     */
+    private CmsXmlContentProperty mergeListedSetting(
+        CmsXmlContentProperty settingDef,
+        String includeName,
+        Map<CmsSharedSettingKey, CmsXmlContentProperty> sharedSettingDefinitions,
+        Map<CmsSharedSettingKey, CmsXmlContentProperty> overrideSettingDefinitions) {
+
+        CmsXmlContentProperty defaultSetting = getSharedSetting(sharedSettingDefinitions, includeName);
+        CmsXmlContentProperty overrideSetting = getSharedSetting(overrideSettingDefinitions, includeName);
+        CmsXmlContentProperty mergedSetting = settingDef;
+        if (defaultSetting != null) {
+            mergedSetting = mergedSetting.mergeDefaults(defaultSetting);
+        }
+        if (overrideSetting != null) {
+            mergedSetting = overrideSetting.mergeDefaults(mergedSetting);
+        }
+        return mergedSetting;
+    }
+
+    /**
+     * Resolves a setting's effective (property) name back to the include name that the formatter
+     * references it by, mirroring how {@link #resolveSettings} derives the effective settings. Read-only,
+     * used for configuration origin discovery.<p>
+     *
+     * @param overrideIds the sitemap setting override file ids active in the current context
+     * @param settingName the effective (property) name of the setting
+     *
+     * @return the include name the formatter references the setting by, or <code>settingName</code> if no
+     *         listed setting resolves to it
+     */
+    private String resolveIncludeName(List<CmsUUID> overrideIds, String settingName) {
+
+        Map<CmsSharedSettingKey, CmsXmlContentProperty> sharedSettingDefinitions = combineSharedSettingDefinitionMaps(
+            m_sharedSettingsIdsFromFormatter);
+        Map<CmsSharedSettingKey, CmsXmlContentProperty> overrideSettingDefinitions = combineSharedSettingDefinitionMaps(
+            overrideIds);
+        String result = settingName;
+        // later listed settings win, mirroring the last-wins put in resolveSettings
+        for (CmsXmlContentProperty settingDef : m_listedSettings) {
+            String includeName = settingDef.getIncludeName(settingDef.getName());
+            if (includeName == null) {
+                continue;
+            }
+            CmsXmlContentProperty mergedSetting = mergeListedSetting(
+                settingDef,
+                includeName,
+                sharedSettingDefinitions,
+                overrideSettingDefinitions);
+            if (settingName.equals(mergedSetting.getName())) {
+                result = includeName;
+            }
+        }
+        return result;
     }
 
     /**
@@ -221,15 +402,11 @@ public class CmsSettingConfiguration {
                 continue;
             }
 
-            CmsXmlContentProperty defaultSetting = getSharedSetting(sharedSettingDefinitions, includeName);
-            CmsXmlContentProperty overrideSetting = getSharedSetting(overrideSettingDefinitions, includeName);
-            CmsXmlContentProperty mergedSetting = settingDef;
-            if (defaultSetting != null) {
-                mergedSetting = mergedSetting.mergeDefaults(defaultSetting);
-            }
-            if (overrideSetting != null) {
-                mergedSetting = overrideSetting.mergeDefaults(mergedSetting);
-            }
+            CmsXmlContentProperty mergedSetting = mergeListedSetting(
+                settingDef,
+                includeName,
+                sharedSettingDefinitions,
+                overrideSettingDefinitions);
             if (mergedSetting.getName() == null) {
                 continue;
             }

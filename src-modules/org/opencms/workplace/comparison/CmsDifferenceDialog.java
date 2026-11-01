@@ -29,9 +29,9 @@ package org.opencms.workplace.comparison;
 
 import org.opencms.jsp.CmsJspActionElement;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides a GUI for the file comparison dialog.<p>
@@ -119,16 +119,6 @@ public class CmsDifferenceDialog extends A_CmsDiffViewDialog {
     }
 
     /**
-     * Returns the paramLocale.<p>
-     *
-     * @return the paramLocale
-     */
-    public String getParamLocale() {
-
-        return m_paramLocale;
-    }
-
-    /**
      * Returns the paramId1.<p>
      *
      * @return the paramId1
@@ -146,6 +136,16 @@ public class CmsDifferenceDialog extends A_CmsDiffViewDialog {
     public String getParamId2() {
 
         return m_paramId2;
+    }
+
+    /**
+     * Returns the paramLocale.<p>
+     *
+     * @return the paramLocale
+     */
+    public String getParamLocale() {
+
+        return m_paramLocale;
     }
 
     /**
@@ -239,16 +239,6 @@ public class CmsDifferenceDialog extends A_CmsDiffViewDialog {
     }
 
     /**
-     * Sets the paramLocale.<p>
-     *
-     * @param paramLocale the paramLocale to set
-     */
-    public void setParamLocale(String paramLocale) {
-
-        m_paramLocale = paramLocale;
-    }
-
-    /**
      * Sets the paramId1.<p>
      *
      * @param paramId1 the paramId1 to set
@@ -266,6 +256,16 @@ public class CmsDifferenceDialog extends A_CmsDiffViewDialog {
     public void setParamId2(String paramId2) {
 
         m_paramId2 = paramId2;
+    }
+
+    /**
+     * Sets the paramLocale.<p>
+     *
+     * @param paramLocale the paramLocale to set
+     */
+    public void setParamLocale(String paramLocale) {
+
+        m_paramLocale = paramLocale;
     }
 
     /**

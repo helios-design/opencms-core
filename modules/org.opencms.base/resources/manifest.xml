@@ -36,7 +36,7 @@ chacc '/system/workplace/editors/' 'ROLE' 'ELEMENT_AUTHOR' '+I+O+R+V']]></import
 		<export-mode name="reduced"/>
 		<description><![CDATA[Configuration for OpenCms websites.<br>
 <i>&copy; by Alkacon Software GmbH &amp; Co. KG (https://www.alkacon.com).</i>]]></description>
-		<version>21.0.0</version>
+		<version>22.0.0</version>
 		<authorname><![CDATA[Alkacon Software GmbH &amp; Co. KG]]></authorname>
 		<authoremail><![CDATA[sales@alkacon.com]]></authoremail>
 		<datecreated/>
@@ -318,7 +318,7 @@ chacc '/system/workplace/editors/' 'ROLE' 'ELEMENT_AUTHOR' '+I+O+R+V']]></import
 					</property>
 				</properties>
 			</type>
-			<type class="org.opencms.file.types.CmsResourceTypeXmlAdeConfiguration" name="sitemap_master_config" id="313">
+				<type class="org.opencms.file.types.CmsResourceTypeXmlAdeConfiguration" name="sitemap_master_config" id="313">
 				<properties>
 					<property>
 						<name>locale-available</name>
@@ -609,7 +609,7 @@ chacc '/system/workplace/editors/' 'ROLE' 'ELEMENT_AUTHOR' '+I+O+R+V']]></import
 					<accessentry principal="ROLE.WORKPLACE_USER" permissions="+r+v+w+c"/>
 				</accesscontrol>
 			</explorertype>
-			<explorertype name="modelgroup" key="fileicon.modelgroup" smalliconstyle="oc-icon-16-modelgroup_reuse" bigiconstyle="oc-icon-24-modelgroup_reuse" reference="xmlcontent">
+				<explorertype name="modelgroup" key="fileicon.modelgroup" smalliconstyle="oc-icon-16-modelgroup_reuse" bigiconstyle="oc-icon-24-modelgroup_reuse" reference="xmlcontent">
 				<newresource creatable="true" order="50" autosetnavigation="false" autosettitle="false" info="desc.modelgroup"/>
 				<accesscontrol>
 					<accessentry principal="ROLE.DEVELOPER" permissions="+r+v+w+c"/>

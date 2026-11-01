@@ -35,9 +35,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A <code>CmsWidgetDialog</code> that starts a (confirmed) rebuild dialog for
@@ -117,9 +117,10 @@ public class CmsRebuildSearchIndexDialog extends A_CmsEditSearchIndexDialog {
             // create the widgets for the first dialog page
             result.append(dialogBlockStart(key(Messages.GUI_LIST_SEARCHINDEX_ACTION_REBUILD_NAME_0)));
             result.append(createWidgetTableStart());
-            result.append(key(
-                Messages.GUI_LIST_SEARCHINDEX_ACTION_REBUILD_NAME_CONF_1,
-                new Object[] {getSearchIndexIndex().getName()}));
+            result.append(
+                key(
+                    Messages.GUI_LIST_SEARCHINDEX_ACTION_REBUILD_NAME_CONF_1,
+                    new Object[] {getSearchIndexIndex().getName()}));
             result.append(createWidgetTableEnd());
             result.append(dialogBlockEnd());
         }

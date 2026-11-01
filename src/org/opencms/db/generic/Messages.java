@@ -86,6 +86,9 @@ public final class Messages extends A_CmsMessageBundle {
     public static final String ERR_INITIALIZING_USER_DRIVER_0 = "ERR_INITIALIZING_USER_DRIVER_0";
 
     /** Message constant for key in the resource bundle. */
+    public static final String ERR_INITIALIZING_HISTORY_DRIVER_0 = "ERR_INITIALIZING_HISTORY_DRIVER_0";
+
+    /** Message constant for key in the resource bundle. */
     public static final String ERR_INITIALIZING_VFS_DRIVER_0 = "ERR_INITIALIZING_VFS_DRIVER_0";
 
     /** Message constant for key in the resource bundle. */
@@ -225,6 +228,9 @@ public final class Messages extends A_CmsMessageBundle {
 
     /** Message constant for key in the resource bundle. */
     public static final String ERR_SQLMANAGER_NOT_INITIALIZED_0 = "ERR_SQLMANAGER_NOT_INITIALIZED_0";
+
+    /** Message constant for key in the resource bundle. */
+    public static final String ERR_STORAGE_CONTENT_READ_2 = "ERR_STORAGE_CONTENT_READ_2";
 
     /** Message constant for key in the resource bundle. */
     public static final String ERR_TOO_MANY_PROPERTIES_3 = "ERR_TOO_MANY_PROPERTIES_3";

@@ -40,9 +40,9 @@ import org.opencms.util.CmsStringUtil;
 
 import java.util.List;
 
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-import javax.servlet.jsp.tagext.Tag;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
+import jakarta.servlet.jsp.tagext.Tag;
 
 /**
  * Implementation of the <code>&lt;cms:resourceload/&gt;</code> tag,
@@ -123,7 +123,7 @@ public class CmsJspTagResourceLoad extends CmsJspScopedVarBodyTagSuport implemen
         PageContext context,
         String collectorName,
         String collectorParam)
-        throws JspException {
+    throws JspException {
 
         this(container, context, collectorName, collectorParam, null, null);
     }
@@ -147,7 +147,7 @@ public class CmsJspTagResourceLoad extends CmsJspScopedVarBodyTagSuport implemen
         String collectorParam,
         String pageIndex,
         String pageSize)
-        throws JspException {
+    throws JspException {
 
         setCollector(collectorName);
         setParam(collectorParam);
@@ -221,7 +221,7 @@ public class CmsJspTagResourceLoad extends CmsJspScopedVarBodyTagSuport implemen
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.BodyTagSupport#doAfterBody()
+     * @see jakarta.servlet.jsp.tagext.BodyTagSupport#doAfterBody()
      */
     @Override
     public int doAfterBody() throws JspException {
@@ -240,7 +240,7 @@ public class CmsJspTagResourceLoad extends CmsJspScopedVarBodyTagSuport implemen
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#doEndTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doEndTag()
      */
     @Override
     public int doEndTag() {
@@ -250,7 +250,7 @@ public class CmsJspTagResourceLoad extends CmsJspScopedVarBodyTagSuport implemen
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() throws JspException, CmsIllegalArgumentException {
@@ -424,7 +424,7 @@ public class CmsJspTagResourceLoad extends CmsJspScopedVarBodyTagSuport implemen
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#release()
+     * @see jakarta.servlet.jsp.tagext.Tag#release()
      */
     @Override
     public void release() {

@@ -201,6 +201,9 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
     /** The SQL manager. */
     protected CmsSqlManager m_sqlManager;
 
+    /** Last project creation timestamp allocated by this driver, guarded by this instance's monitor. */
+    private long m_lastProjectCreateTime;
+
     /**
      * @see org.opencms.db.I_CmsProjectDriver#cleanupPublishHistory(org.opencms.db.CmsDbContext, org.opencms.db.generic.CmsPublishHistoryCleanupFilter)
      */
@@ -292,18 +295,11 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
             stmt.setString(10, CmsOrganizationalUnit.SEPARATOR + CmsOrganizationalUnit.getParentFqn(projectFqn));
 
             synchronized (this) {
-                long createTime = System.currentTimeMillis();
+                // Keep timestamps unique within this driver for the (OU, name, date created) unique index.
+                long createTime = Math.max(System.currentTimeMillis(), m_lastProjectCreateTime + 1);
+                m_lastProjectCreateTime = createTime;
                 stmt.setLong(8, createTime);
                 stmt.executeUpdate();
-                try {
-                    // this is an ugly hack, but for MySQL (and maybe other DBs as well)
-                    // there is a UNIQUE INDEX constraint on the project name+createTime
-                    // so theoretically if 2 projects with the same name are created very fast, this
-                    // SQL restraint would be violated if we don't wait here
-                    Thread.sleep(50);
-                } catch (InterruptedException e) {
-                    // continue
-                }
                 project = new CmsProject(
                     id,
                     projectFqn,
@@ -763,9 +759,9 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
         String usersGroup = OpenCms.getDefaultUsers().getGroupUsers();
         CmsGroup users = m_driverManager.readGroup(dbc, usersGroup);
 
-        ////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////
         // online project stuff
-        ////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////
 
         // create the online project
         CmsProject onlineProject = createProject(
@@ -823,9 +819,9 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
 
         m_driverManager.getVfsDriver(dbc).createResource(dbc, onlineProject.getUuid(), systemFolder, null);
 
-        ////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////
         // setup project stuff
-        ////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////
 
         // important: must access through driver manager to ensure proper cascading
         CmsProject setupProject = m_driverManager.getProjectDriver(dbc).createProject(
@@ -1063,6 +1059,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
                         internalWriteHistory(
                             dbc,
                             offlineFile,
+                            delFile,
                             CmsResource.STATE_DELETED,
                             null,
                             publishHistoryId,
@@ -1078,6 +1075,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
                         internalWriteHistory(
                             dbc,
                             offlineResource,
+                            delFile,
                             CmsResource.STATE_DELETED,
                             null,
                             publishHistoryId,
@@ -1099,7 +1097,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
             }
 
             // write history before deleting
-            internalWriteHistory(dbc, currentFolder, folderState, null, publishHistoryId, publishTag);
+            internalWriteHistory(dbc, currentFolder, null, folderState, null, publishHistoryId, publishTag);
 
             try {
                 // delete the properties online and offline
@@ -1654,7 +1652,14 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
                 throw e;
             }
 
-            internalWriteHistory(dbc, offlineFolder, resourceState, offlineProperties, publishHistoryId, publishTag);
+            internalWriteHistory(
+                dbc,
+                offlineFolder,
+                null,
+                resourceState,
+                offlineProperties,
+                publishHistoryId,
+                publishTag);
 
             m_driverManager.getVfsDriver(dbc).updateRelations(dbc, onlineProject, offlineFolder);
 
@@ -1698,7 +1703,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
 
         try {
 
-            ////////////////////////////////////////////////////////////////////////////////////////
+            /////////////////////////////////////////////////////////////////////////////////
             // write the historical project entry
 
             if (OpenCms.getSystemInfo().isHistoryEnabled()) {
@@ -1716,7 +1721,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
                 }
             }
 
-            ///////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////
             // publish new/changed folders
 
             if (LOG.isDebugEnabled()) {
@@ -1821,7 +1826,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
                     I_CmsReport.FORMAT_HEADLINE);
             }
 
-            ///////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////
             // publish changed/new/deleted files
 
             publishedFileCount = 0;
@@ -1900,7 +1905,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
                 report.println(Messages.get().container(Messages.RPT_PUBLISH_FILES_END_0), I_CmsReport.FORMAT_HEADLINE);
             }
 
-            ////////////////////////////////////////////////////////////////////////////////////////
+            /////////////////////////////////////////////////////////////////////////////////
 
             // publish deleted folders
             List<CmsResource> deletedFolders = publishList.getDeletedFolderList();
@@ -3259,6 +3264,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
      *
      * @param dbc the current database context
      * @param resource the offline resource
+     * @param publishHistoryResource the resource to use for the publish history (if null, uses the value of resource instead)
      * @param state the state to store in the publish history entry
      * @param properties the offline properties
      * @param publishHistoryId the current publish process id
@@ -3269,6 +3275,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
     protected void internalWriteHistory(
         CmsDbContext dbc,
         CmsResource resource,
+        CmsResource publishHistoryResource,
         CmsResourceState state,
         List<CmsProperty> properties,
         CmsUUID publishHistoryId,
@@ -3290,7 +3297,10 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
             m_driverManager.getProjectDriver(dbc).writePublishHistory(
                 dbc,
                 publishHistoryId,
-                new CmsPublishedResource(resource, publishTag, state));
+                new CmsPublishedResource(
+                    publishHistoryResource != null ? publishHistoryResource : resource,
+                    publishTag,
+                    state));
         } catch (CmsDataAccessException e) {
             if (LOG.isErrorEnabled()) {
                 LOG.error(
@@ -3553,7 +3563,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
 
         CmsFile offlineFile = new CmsFile(offlineResource);
         offlineFile.setContents(newFile.getContents());
-        internalWriteHistory(dbc, offlineFile, resourceState, offlineProperties, publishHistoryId, publishTag);
+        internalWriteHistory(dbc, offlineFile, null, resourceState, offlineProperties, publishHistoryId, publishTag);
 
         m_driverManager.getVfsDriver(dbc).updateRelations(dbc, onlineProject, offlineResource);
     }
@@ -3617,7 +3627,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
                 dbc,
                 dbc.currentProject().getUuid(),
                 offlineFile.getResourceId()));
-        internalWriteHistory(dbc, offlineFile, resourceState, null, publishHistoryId, publishTag);
+        internalWriteHistory(dbc, offlineFile, null, resourceState, null, publishHistoryId, publishTag);
 
         int propertyDeleteOption = -1;
         try {
@@ -3868,7 +3878,7 @@ public class CmsProjectDriver implements I_CmsDriver, I_CmsProjectDriver {
 
         CmsFile offlineFile = new CmsFile(offlineResource);
         offlineFile.setContents(newFile.getContents());
-        internalWriteHistory(dbc, offlineFile, resourceState, offlineProperties, publishHistoryId, publishTag);
+        internalWriteHistory(dbc, offlineFile, null, resourceState, offlineProperties, publishHistoryId, publishTag);
 
         m_driverManager.getVfsDriver(dbc).updateRelations(dbc, onlineProject, offlineResource);
     }

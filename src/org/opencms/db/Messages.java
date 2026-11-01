@@ -445,6 +445,9 @@ public final class Messages extends A_CmsMessageBundle {
     public static final String ERR_READ_CHILD_RESOURCES_1 = "ERR_READ_CHILD_RESOURCES_1";
 
     /** Message constant for key in the resource bundle. */
+    public static final String ERR_READ_CONTENT_WITH_RESOURCE_ID_2 = "ERR_READ_CONTENT_WITH_RESOURCE_ID_2";
+
+    /** Message constant for key in the resource bundle. */
     public static final String ERR_READ_FILE_1 = "ERR_READ_FILE_1";
 
     /** Message constant for key in the resource bundle. */
@@ -846,7 +849,6 @@ public final class Messages extends A_CmsMessageBundle {
     /** Message constant for key in the resource bundle. */
     public static final String INIT_SECURITY_MANAGER_SHUTDOWN_1 = "INIT_SECURITY_MANAGER_SHUTDOWN_1";
 
-    /** Message constant for key in the resource bundle. */
     public static final String INIT_WAIT_FOR_DB_4 = "INIT_WAIT_FOR_DB_4";
 
     /** Message constant for key in the resource bundle. */

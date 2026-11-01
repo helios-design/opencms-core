@@ -51,6 +51,9 @@ public final class CmsRequestContext {
     /** Request context attribute for the ADE context path (should be a root path). */
     public static final String ATTRIBUTE_ADE_CONTEXT_PATH = CmsRequestContext.class.getName() + ".ADE_CONTEXT_PATH";
 
+    /** Request context attribute for the optional client label a session created from this context is marked with. */
+    public static final String ATTRIBUTE_CLIENT_LABEL = CmsRequestContext.class.getName() + ".CLIENT_LABEL";
+
     /** Request context attribute for indicating that an editor is currently open. */
     public static final String ATTRIBUTE_EDITOR = CmsRequestContext.class.getName() + ".ATTRIBUTE_EDITOR";
 
@@ -375,12 +378,12 @@ public final class CmsRequestContext {
      * Returns the locale used by this request context.<p>
      *
      * In normal operation, the request context locale is initialized using
-     * {@link org.opencms.i18n.I_CmsLocaleHandler#getI18nInfo(javax.servlet.http.HttpServletRequest, CmsUser, CmsProject, String)}
+     * {@link org.opencms.i18n.I_CmsLocaleHandler#getI18nInfo(jakarta.servlet.http.HttpServletRequest, CmsUser, CmsProject, String)}
      * depending on the requested resource URI.<p>
      *
      * @return the locale used by this request context
      *
-     * @see org.opencms.i18n.I_CmsLocaleHandler#getI18nInfo(javax.servlet.http.HttpServletRequest, CmsUser, CmsProject, String)
+     * @see org.opencms.i18n.I_CmsLocaleHandler#getI18nInfo(jakarta.servlet.http.HttpServletRequest, CmsUser, CmsProject, String)
      * @see org.opencms.i18n.CmsLocaleManager#getDefaultLocale(CmsObject, String)
      */
     public Locale getLocale() {

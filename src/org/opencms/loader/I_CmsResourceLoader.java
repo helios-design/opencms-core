@@ -35,11 +35,11 @@ import org.opencms.main.CmsException;
 import java.io.IOException;
 import java.util.Locale;
 
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * This interface describes a resource loader for OpenCms,
@@ -50,8 +50,8 @@ import javax.servlet.http.HttpServletResponse;
  * much the same way as a standard Java web application.<p>
  *
  * This interface uses a standard servlet
- * {@link javax.servlet.http.HttpServletRequestWrapper} / {@link javax.servlet.http.HttpServletResponseWrapper}
- * that provide access to a special implementation of the {@link javax.servlet.RequestDispatcher}.
+ * {@link jakarta.servlet.http.HttpServletRequestWrapper} / {@link jakarta.servlet.http.HttpServletResponseWrapper}
+ * that provide access to a special implementation of the {@link jakarta.servlet.RequestDispatcher}.
  * The handling of the output written to the response is done by this
  * dispatcher. The results are then passed back to OpenCms which
  * will deliver them to the requesting user.<p>
@@ -102,7 +102,8 @@ public interface I_CmsResourceLoader extends I_CmsConfigurationParameterHandler 
         String element,
         Locale locale,
         HttpServletRequest req,
-        HttpServletResponse res) throws ServletException, IOException, CmsException;
+        HttpServletResponse res)
+    throws ServletException, IOException, CmsException;
 
     /**
      * Static exports the contents of the requested file and it's sub-elements.<p>

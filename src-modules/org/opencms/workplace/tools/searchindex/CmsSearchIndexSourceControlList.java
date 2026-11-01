@@ -56,12 +56,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A list that displays information about the <code>{@link org.opencms.search.CmsSearchIndexSource}</code>
@@ -95,7 +95,7 @@ public class CmsSearchIndexSourceControlList extends A_CmsListDialog {
      * This is meant to be used for the same action as
      * <code>{@link #LIST_ACTION_OVERVIEW_INDEXSOURCE}</code> but has to be used if
      * within one list two columns shall trigger the same action...<p>
-     **/
+     */
     public static final String LIST_ACTION_OVERVIEW_INDEXSOURCE2 = "aois2";
 
     /** list action dummy id constant. */

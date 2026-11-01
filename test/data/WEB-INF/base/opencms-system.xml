@@ -40,13 +40,13 @@
 		</resourceinit>
 		<requesthandlers>
 			<requesthandler class="org.opencms.main.CmsStaticResourceHandler"/>
-			<requesthandler class="org.opencms.main.OpenCmsSolrHandler" />
 		</requesthandlers>
 		<passwordhandler class="org.opencms.security.CmsDefaultPasswordHandler">
 			<encoding>UTF-8</encoding>
 			<digest-type>scrypt</digest-type>
 			<param name="compatibility.convert.digestencoding">false</param>
-			<param name="scrypt.settings">16384,8,1</param>
+			<!-- Low cost for test fixtures only; production defaults are covered by TestLoginAndPasswordHandler. -->
+			<param name="scrypt.settings">1024,8,1</param>
 		</passwordhandler>
 		<validationhandler class="org.opencms.security.CmsDefaultValidationHandler" />
 		<two-factor-authentication>
@@ -105,12 +105,18 @@
 			<size-resourcelists>256</size-resourcelists>
 			<size-properties>1024</size-properties>
 			<size-propertylists>1024</size-propertylists>
-			<size-accesscontrollists>1024</size-accesscontrollists>
+			<size-accesscontrollists>1024</size-accesscontrollists>	
 			<size-permissions>1024</size-permissions>
-		</resultcache>
+		</resultcache>		
+		<storedcontentinfocache>
+			<storedcontentinfocache-factory>org.opencms.db.storage.CmsInMemoryStoredContentInfoCacheFactory</storedcontentinfocache-factory>
+			<storedcontentinfocache-enabled>true</storedcontentinfocache-enabled>
+			<storedcontentinfocache-size>10000</storedcontentinfocache-size>
+			<storedcontentinfocache-ttl>300</storedcontentinfocache-ttl>
+		</storedcontentinfocache>
 		<content-notification>
-			<notification-time>365</notification-time>
-			<notification-project>Offline</notification-project>
+            <notification-time>365</notification-time>
+            <notification-project>Offline</notification-project>
 		</content-notification>
 		<authorizationhandler
 			class="org.opencms.security.CmsDefaultAuthorizationHandler" />

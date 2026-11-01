@@ -28,6 +28,7 @@
 package org.opencms.ade.configuration;
 
 import org.opencms.ade.configuration.CmsADEConfigData.DetailInfo;
+import org.opencms.ade.configuration.CmsADEConfigDataInternal.AttributeValue;
 import org.opencms.ade.configuration.CmsElementView.ElementViewComparator;
 import org.opencms.ade.configuration.formatters.CmsFormatterConfigurationCache;
 import org.opencms.ade.configuration.formatters.CmsFormatterConfigurationCacheState;
@@ -114,15 +115,15 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * This is the main class used to access the ADE configuration and also accomplish some other related tasks
@@ -751,6 +752,28 @@ public class CmsADEManager {
     }
 
     /**
+     * Gets local attributes for every website and subsite, independently of the site selector.<p>
+     *
+     * Master configurations and connectors are included; attributes inherited from parent websites or subsites are excluded.<p>
+     *
+     * @param online true to use the Online configuration, false for Offline
+     *
+     * @return attributes indexed by normalized website or subsite root path
+     */
+    public Map<String, Map<String, AttributeValue>> getLocalSitemapAttributes(boolean online) {
+
+        CmsADEConfigCacheState state = getCacheState(online);
+        Set<String> paths = new HashSet<>(OpenCms.getSiteManager().getSiteRoots());
+        paths.addAll(state.getSiteConfigurationPaths());
+        paths.removeIf(
+            path -> "/".equals(CmsFileUtil.addTrailingSeparator(path))
+                || OpenCms.getSiteManager().isSharedFolder(path));
+        List<I_CmsSitemapExtraInfo> extraInfo = getSitemapExtraInfoProviders().stream().map(
+            provider -> provider.getExtraInfo(state.getCms())).collect(Collectors.toList());
+        return state.getLocalAttributesByPath(paths, extraInfo);
+    }
+
+    /**
      * Gets the maximum sitemap depth.<p>
      *
      * @return the maximum sitemap depth
@@ -872,18 +895,9 @@ public class CmsADEManager {
         return result;
     }
 
-    /**
-     * Gets the content element type for the given path's parent folder.
-     *
-     * @param online true if we want to use the Online project's configuration
-     * @param rootPath the root path of a content
-     *
-     * @return the parent folder type name, or null if none is defined
-     */
-    public String getParentFolderType(boolean online, String rootPath) {
+    public Set<String> getParentFolderTypes(boolean online, String contentRootPath) {
 
-        return getCacheState(online).getParentFolderType(rootPath);
-
+        return getCacheState(online).getParentFolderTypes(contentRootPath);
     }
 
     /**

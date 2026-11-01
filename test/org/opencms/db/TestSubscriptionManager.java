@@ -34,65 +34,58 @@ import org.opencms.file.CmsResource;
 import org.opencms.file.CmsUser;
 import org.opencms.file.history.I_CmsHistoryResource;
 import org.opencms.main.OpenCms;
-import org.opencms.test.OpenCmsTestCase;
-import org.opencms.test.OpenCmsTestProperties;
+import org.opencms.test.OpenCmsTestRunner;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import junit.extensions.TestSetup;
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 
 /**
  * Unit tests for OpenCms subscription manager.<p>
  */
-public class TestSubscriptionManager extends OpenCmsTestCase {
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class TestSubscriptionManager extends OpenCmsTestRunner {
 
-    /** Time to wait for a database operation to finish. */
-    private static final long WAIT_FOR_DB_MILLIS = 300;
+    /** Maximum time to wait for the wall clock to advance. */
+    private static final long CLOCK_ADVANCE_TIMEOUT_MILLIS = 1000;
 
     /**
-     * Default JUnit constructor.<p>
      *
-     * @param arg0 JUnit parameters
+     * Makes sure System.currentTimeMillis() advances.
+     *
+     * @return the current wall-clock time, strictly greater than the time at entry
+     * @throws InterruptedException if the wait is interrupted
      */
-    public TestSubscriptionManager(String arg0) {
+    private static long waitForClockTick() throws InterruptedException {
 
-        super(arg0);
+        long start = System.nanoTime();
+        long timestamp = System.currentTimeMillis();
+        long now = timestamp;
+        while (now <= timestamp) {
+            if ((System.nanoTime() - start) >= TimeUnit.MILLISECONDS.toNanos(CLOCK_ADVANCE_TIMEOUT_MILLIS)) {
+                fail(
+                    "Wall clock did not advance past " + timestamp + " within " + CLOCK_ADVANCE_TIMEOUT_MILLIS + " ms");
+            }
+            Thread.sleep(1);
+            now = System.currentTimeMillis();
+        }
+        return now;
     }
 
     /**
-     * Test suite for this test class.<p>
-     *
-     * @return the test suite
+     * Overrides the OpenCms test setup.
      */
-    public static Test suite() {
+    @Override
+    @BeforeAll
+    public void $openCmsSetUp(TestInfo testInfo) {
 
-        OpenCmsTestProperties.initialize(org.opencms.test.AllTests.TEST_PROPERTIES_PATH);
-
-        TestSuite suite = new TestSuite();
-        suite.setName(TestSubscriptionManager.class.getName());
-
-        suite.addTest(new TestSubscriptionManager("testVisitResources"));
-        suite.addTest(new TestSubscriptionManager("testSubscribeResources"));
-        suite.addTest(new TestSubscriptionManager("testReadSubscribedResources"));
-
-        TestSetup wrapper = new TestSetup(suite) {
-
-            @Override
-            protected void setUp() {
-
-                setupOpenCms("simpletest", "/");
-            }
-
-            @Override
-            protected void tearDown() {
-
-                removeOpenCms();
-            }
-        };
-
-        return wrapper;
+        setupOpenCms(testInfo, "simpletest", "/");
     }
 
     /**
@@ -100,6 +93,8 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
      *
      * @throws Throwable if something goes wrong
      */
+    @Test
+    @Order(3)
     public void testReadSubscribedResources() throws Throwable {
 
         CmsObject cms = getCmsObject();
@@ -128,9 +123,8 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
 
         subscribedUserResources = subMan.readSubscribedResources(cms, filter);
         assertEquals(2, subscribedUserResources.size());
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
+        waitForClockTick();
         subMan.markResourceAsVisitedBy(cms, "/folder2/page1.html", user);
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
         filter.setMode(CmsSubscriptionReadMode.VISITED);
         subscribedUserResources = subMan.readSubscribedResources(cms, filter);
         assertEquals(1, subscribedUserResources.size());
@@ -140,7 +134,7 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
         assertEquals(1, subscribedUserResources.size());
 
         long beforeChangeTime = System.currentTimeMillis();
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
+        waitForClockTick();
         cms.lockResource("/folder2/page1.html");
         CmsFile file = cms.readFile("/folder2/page1.html");
         cms.writeFile(file);
@@ -186,6 +180,8 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
      *
      * @throws Throwable if something goes wrong
      */
+    @Test
+    @Order(2)
     public void testSubscribeResources() throws Throwable {
 
         CmsObject cms = getCmsObject();
@@ -209,6 +205,8 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
      *
      * @throws Throwable if something goes wrong
      */
+    @Test
+    @Order(1)
     public void testVisitResources() throws Throwable {
 
         CmsObject cms = getCmsObject();
@@ -224,10 +222,9 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
         assertEquals(1, visitedUserResources.size());
         assertEquals("/folder1/index.html", cms.getSitePath(visitedUserResources.get(0)));
 
-        // wait between operations to be able to perform time based tests
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
-        long storedTime = System.currentTimeMillis();
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
+        // Keep the filter boundary strictly between the two visit timestamps.
+        long storedTime = waitForClockTick();
+        waitForClockTick();
         subMan.markResourceAsVisitedBy(cms, "/folder1/page1.html", user);
         visitedUserResources = subMan.readResourcesVisitedBy(cms, filter);
         assertEquals(2, visitedUserResources.size());
@@ -237,19 +234,20 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
         assertEquals(1, visitedUserResources.size());
         assertEquals("/folder1/page1.html", cms.getSitePath(visitedUserResources.get(0)));
 
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
-        storedTime = System.currentTimeMillis();
+        storedTime = waitForClockTick();
         filter.setFromDate(storedTime);
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
         visitedUserResources = subMan.readResourcesVisitedBy(cms, filter);
         assertEquals(0, visitedUserResources.size());
 
+        // Keep later visits strictly after the upper date boundary.
+        waitForClockTick();
+        // Visit dates must be distinct because (USER_ID, VISIT_DATE) is the primary key.
         subMan.markResourceAsVisitedBy(cms, "/folder1/page2.html", user);
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
+        waitForClockTick();
         subMan.markResourceAsVisitedBy(cms, "/folder1/page3.html", user);
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
+        waitForClockTick();
         subMan.markResourceAsVisitedBy(cms, "/folder1/subfolder11/page1.html", user);
-        Thread.sleep(WAIT_FOR_DB_MILLIS);
+        waitForClockTick();
         subMan.markResourceAsVisitedBy(cms, "/folder1/subfolder11/page2.html", user);
 
         filter = new CmsVisitedByFilter(cms);
@@ -270,4 +268,5 @@ public class TestSubscriptionManager extends OpenCmsTestCase {
         assertEquals(2, visitedUserResources.size());
 
     }
+
 }

@@ -202,6 +202,7 @@ public class CmsGalleryControllerHandler implements ValueChangeHandler<CmsGaller
         final CmsGalleryController controller,
         boolean isFirstTime) {
 
+        m_galleryDialog.setQuotaReferencePath(dialogBean.getReferenceSitePath());
         m_mode = dialogBean.getMode();
         if (isFirstTime) {
             if ((dialogBean.getSitemapSiteSelectorOptions() == null)
@@ -274,7 +275,8 @@ public class CmsGalleryControllerHandler implements ValueChangeHandler<CmsGaller
             && CmsStringUtil.isNotEmptyOrWhitespaceOnly(searchObj.getResourceType())
             && !searchObj.isDisablePreview()) {
             if (m_galleryDialog.isAttached()) {
-                controller.openPreview(searchObj.getResourcePath(), searchObj.getResourceType());
+                m_galleryDialog.runAfterQuotaCheck(
+                    () -> controller.openPreview(searchObj.getResourcePath(), searchObj.getResourceType()));
             } else {
                 // gallery dialog has to be attached to open the preview
                 m_galleryDialog.setOnAttachCommand(new Command() {
@@ -284,7 +286,8 @@ public class CmsGalleryControllerHandler implements ValueChangeHandler<CmsGaller
                      */
                     public void execute() {
 
-                        controller.openPreview(searchObj.getResourcePath(), searchObj.getResourceType());
+                        m_galleryDialog.runAfterQuotaCheck(
+                            () -> controller.openPreview(searchObj.getResourcePath(), searchObj.getResourceType()));
 
                     }
                 });

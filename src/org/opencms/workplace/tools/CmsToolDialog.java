@@ -40,7 +40,7 @@ import org.opencms.workplace.CmsWorkplaceSettings;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Helper class that encapsulates all the code for the "new"
@@ -264,7 +264,7 @@ public class CmsToolDialog extends CmsWorkplace {
      *
      * @param segment the HTML segment (START / END)
      * @param headline the headline String for the block
-    
+     *
      * @return block area start / end segment
      *
      * @see CmsDialog#dialogBlock(int, String, boolean)
@@ -559,7 +559,7 @@ public class CmsToolDialog extends CmsWorkplace {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

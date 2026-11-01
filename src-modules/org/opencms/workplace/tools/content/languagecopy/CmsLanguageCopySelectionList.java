@@ -66,12 +66,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A list that displays resources and the existance of their language nodes.
@@ -168,7 +168,7 @@ public class CmsLanguageCopySelectionList extends A_CmsListDialog {
         final CmsJspActionElement jsp,
         final String listId,
         final CmsMessageContainer listName)
-        throws FileNotFoundException, CmsException {
+    throws FileNotFoundException, CmsException {
 
         this(jsp, listId, listName, LIST_COLUMN_ID, CmsListOrderEnum.ORDER_ASCENDING, null);
     }
@@ -195,7 +195,7 @@ public class CmsLanguageCopySelectionList extends A_CmsListDialog {
         final String sortedColId,
         final CmsListOrderEnum sortOrder,
         final String searchableColId)
-        throws FileNotFoundException, CmsException {
+    throws FileNotFoundException, CmsException {
 
         super(jsp, listId, listName, sortedColId, sortOrder, searchableColId);
     }
@@ -215,7 +215,7 @@ public class CmsLanguageCopySelectionList extends A_CmsListDialog {
         final PageContext context,
         final HttpServletRequest req,
         final HttpServletResponse res)
-        throws FileNotFoundException, CmsException {
+    throws FileNotFoundException, CmsException {
 
         this(new CmsJspActionElement(context, req, res));
     }
@@ -285,6 +285,16 @@ public class CmsLanguageCopySelectionList extends A_CmsListDialog {
     }
 
     /**
+     * Returns the paramDelete.<p>
+     *
+     * @return the paramDelete
+     */
+    public String getParamDelete() {
+
+        return m_paramDelete;
+    }
+
+    /**
      * @return the paths
      */
     public String getParamPaths() {
@@ -306,16 +316,6 @@ public class CmsLanguageCopySelectionList extends A_CmsListDialog {
     public String getParamTargetlanguage() {
 
         return m_paramTargetlanguage;
-    }
-
-    /**
-     * Returns the paramDelete.<p>
-     *
-     * @return the paramDelete
-     */
-    public String getParamDelete() {
-
-        return m_paramDelete;
     }
 
     /**
@@ -397,7 +397,7 @@ public class CmsLanguageCopySelectionList extends A_CmsListDialog {
 
     /**
      * @see org.opencms.workplace.list.A_CmsListDialog#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings,
-     *      javax.servlet.http.HttpServletRequest)
+     *      jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(final CmsWorkplaceSettings settings, final HttpServletRequest request) {

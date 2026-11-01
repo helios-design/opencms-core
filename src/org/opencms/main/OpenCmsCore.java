@@ -32,6 +32,7 @@ import org.opencms.ade.containerpage.CmsContainerpageService;
 import org.opencms.cache.CmsVfsMemoryObjectCache;
 import org.opencms.configuration.CmsConfigurationException;
 import org.opencms.configuration.CmsConfigurationManager;
+import org.opencms.configuration.CmsImageCacheConfiguration;
 import org.opencms.configuration.CmsImportExportConfiguration;
 import org.opencms.configuration.CmsModuleConfiguration;
 import org.opencms.configuration.CmsParameterConfiguration;
@@ -65,11 +66,12 @@ import org.opencms.file.CmsResourceFilter;
 import org.opencms.file.CmsUser;
 import org.opencms.file.CmsVfsResourceNotFoundException;
 import org.opencms.file.quota.CmsFolderSizeTracker;
+import org.opencms.file.quota.CmsQuotaManager;
 import org.opencms.flex.CmsFlexCache;
 import org.opencms.flex.CmsFlexCacheConfiguration;
 import org.opencms.flex.CmsFlexController;
 import org.opencms.gwt.CmsGwtService;
-import org.opencms.gwt.CmsGwtServiceContext;
+import org.opencms.gwt.CmsGwtServiceContext2;
 import org.opencms.gwt.shared.CmsGwtConstants;
 import org.opencms.i18n.CmsEncoder;
 import org.opencms.i18n.CmsI18nInfo;
@@ -79,10 +81,13 @@ import org.opencms.i18n.CmsSingleTreeLocaleHandler;
 import org.opencms.i18n.CmsVfsBundleManager;
 import org.opencms.importexport.CmsImportExportManager;
 import org.opencms.json.JSONObject;
+import org.opencms.jsp.CmsDefaultElementMarker;
+import org.opencms.jsp.I_CmsElementMarker;
 import org.opencms.jsp.jsonpart.CmsJsonPartFilter;
 import org.opencms.jsp.userdata.CmsUserDataRequestManager;
 import org.opencms.jsp.util.CmsJspStandardContextBean;
 import org.opencms.letsencrypt.CmsLetsEncryptConfiguration;
+import org.opencms.loader.CmsImageLoader;
 import org.opencms.loader.CmsJspLoader;
 import org.opencms.loader.CmsResourceManager;
 import org.opencms.loader.CmsTemplateContextManager;
@@ -159,21 +164,21 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
 import org.apache.commons.logging.Log;
 import org.apache.logging.log4j.CloseableThreadContext;
+import org.apache.logging.log4j.jul.Log4jBridgeHandler;
 
 import org.antlr.stringtemplate.StringTemplate;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * The internal implementation of the core OpenCms "operating system" functions.<p>
@@ -201,8 +206,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public final class OpenCmsCore {
 
     static {
-        SLF4JBridgeHandler.removeHandlersForRootLogger();
-        SLF4JBridgeHandler.install();
+        Log4jBridgeHandler.install(true, null, true);
     }
 
     /** Parameter to control whether generated links should always include the host. */
@@ -267,7 +271,7 @@ public final class OpenCmsCore {
     private CmsFlexCache m_flexCache;
 
     /** The context objects for GWT services. */
-    private Map<String, CmsGwtServiceContext> m_gwtServiceContexts;
+    private Map<String, CmsGwtServiceContext2> m_gwtServiceContexts;
 
     /** The site manager contains information about the Cms import/export. */
     private CmsImportExportManager m_importExportManager;
@@ -399,6 +403,9 @@ public final class OpenCmsCore {
 
     /** The configured secret store. */
     private I_CmsSecretStore m_secretStore;
+
+    /** The configured element marker handler (no-op default until configured). */
+    private I_CmsElementMarker m_elementMarker = new CmsDefaultElementMarker();
 
     /**
      * Protected constructor that will initialize the singleton OpenCms instance
@@ -668,6 +675,16 @@ public final class OpenCmsCore {
     }
 
     /**
+     * Gets the configured element marker handler (a no-op default when none is configured).
+     *
+     * @return the element marker handler (never <code>null</code>)
+     */
+    protected I_CmsElementMarker getElementMarker() {
+
+        return m_elementMarker;
+    }
+
+    /**
      * Returns the OpenCms event manager.<p>
      *
      * @return the OpenCms event manager
@@ -736,6 +753,18 @@ public final class OpenCmsCore {
             LOG.error(e.getLocalizedMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * Returns the central image cache retention and maintenance configuration.<p>
+     *
+     * @return the image cache configuration
+     */
+    protected CmsImageCacheConfiguration getImageCacheConfiguration() {
+
+        CmsSystemConfiguration systemConfig = (CmsSystemConfiguration)m_configurationManager.getConfiguration(
+            CmsSystemConfiguration.class);
+        return systemConfig.getImageCacheConfiguration();
     }
 
     /**
@@ -1280,7 +1309,7 @@ public final class OpenCmsCore {
                 private CmsObject m_adminCms;
 
                 /**
-                 * @see org.opencms.security.I_CmsAuthorizationHandler.I_PrivilegedLoginAction#doLogin(javax.servlet.http.HttpServletRequest, java.lang.String)
+                 * @see org.opencms.security.I_CmsAuthorizationHandler.I_PrivilegedLoginAction#doLogin(jakarta.servlet.http.HttpServletRequest, java.lang.String)
                  */
                 public CmsObject doLogin(HttpServletRequest request, String principal) throws CmsException {
 
@@ -1566,7 +1595,7 @@ public final class OpenCmsCore {
         try {
             if (CmsStringUtil.isNotEmptyOrWhitespaceOnly(memoryMonitorConfiguration.getClassName())) {
                 m_memoryMonitor = (CmsMemoryMonitor)Class.forName(
-                    memoryMonitorConfiguration.getClassName()).newInstance();
+                    memoryMonitorConfiguration.getClassName()).getDeclaredConstructor().newInstance();
             } else {
                 m_memoryMonitor = new CmsMemoryMonitor();
             }
@@ -1653,6 +1682,14 @@ public final class OpenCmsCore {
         CmsVfsConfiguration vfsConfiguation = (CmsVfsConfiguration)m_configurationManager.getConfiguration(
             CmsVfsConfiguration.class);
         m_resourceManager = vfsConfiguation.getResourceManager();
+        I_CmsResourceLoader imageLoader = m_resourceManager.getLoader(CmsImageLoader.RESOURCE_LOADER_ID_IMAGE_LOADER);
+        if (imageLoader instanceof CmsImageLoader) {
+            try {
+                ((CmsImageLoader)imageLoader).initializeImageCache(configuration);
+            } catch (CmsConfigurationException e) {
+                throw new CmsInitException(e.getMessageContainer(), e);
+            }
+        }
         m_xmlContentTypeManager = vfsConfiguation.getXmlContentTypeManager();
         m_defaultFiles = vfsConfiguation.getDefaultFiles();
 
@@ -1698,8 +1735,16 @@ public final class OpenCmsCore {
         // get the import/export configuration
         CmsImportExportConfiguration importExportConfiguration = (CmsImportExportConfiguration)m_configurationManager.getConfiguration(
             CmsImportExportConfiguration.class);
+        try {
+            importExportConfiguration.validate();
+        } catch (CmsConfigurationException e) {
+            throw new CmsInitException(e.getMessageContainer(), e);
+        }
         m_importExportManager = importExportConfiguration.getImportExportManager();
         m_staticExportManager = importExportConfiguration.getStaticExportManager();
+        m_staticExportManager.setStoredContentDeliveryConfiguration(
+            importExportConfiguration.getStoredContentDeliveryConfiguration());
+        m_staticExportManager.setSharedCacheConfiguration(importExportConfiguration.getSharedCacheConfiguration());
         m_repositoryManager = importExportConfiguration.getRepositoryManager();
 
         // get the search configuration
@@ -1746,6 +1791,8 @@ public final class OpenCmsCore {
         m_credentialsResolver = systemConfiguration.getCredentialsResolver();
 
         m_secretStore = systemConfiguration.getSecretStore();
+
+        m_elementMarker = systemConfiguration.getElementMarker();
 
         // init the OpenCms security manager
         m_securityManager = CmsSecurityManager.newInstance(
@@ -1951,11 +1998,12 @@ public final class OpenCmsCore {
      */
     protected synchronized void initContext(ServletContext context) throws CmsInitException {
 
-        m_gwtServiceContexts = new HashMap<String, CmsGwtServiceContext>();
+        m_gwtServiceContexts = new HashMap<String, CmsGwtServiceContext2>();
 
         // automatic servlet container recognition and specific behavior:
         CmsServletContainerSettings servletContainerSettings = new CmsServletContainerSettings(context);
         getSystemInfo().init(servletContainerSettings);
+        getSystemInfo().initJavaEeVersion(context.getMajorVersion(), context.getMinorVersion());
 
         // Collect the configurations
         CmsParameterConfiguration configuration;
@@ -2133,7 +2181,7 @@ public final class OpenCmsCore {
      *
      * This is the final step that is called on the servlets "init()" method.
      * It registers the servlets request handler and also outputs the final
-     * startup message. The servlet should auto-load since the &ltload-on-startup&gt;
+     * startup message. The servlet should auto-load since the <code>&lt;load-on-startup&gt;</code>
      * parameter is set in the 'web.xml' by default.<p>
      *
      * @param servlet the OpenCms servlet
@@ -2533,6 +2581,7 @@ public final class OpenCmsCore {
                     // has to be stopped before the security manager, since this thread uses it
                     if (m_threadStore != null) {
                         m_threadStore.shutDown();
+                        m_threadStore.join();
                     }
                 } catch (Throwable e) {
                     CmsLog.INIT.error(
@@ -2585,6 +2634,16 @@ public final class OpenCmsCore {
                 }
                 System.err.println(Messages.get().getBundle().key(Messages.LOG_CONSOLE_TOTAL_RUNTIME_1, runtime));
 
+            }
+            try {
+                final javax.management.MBeanServer mbs = java.lang.management.ManagementFactory.getPlatformMBeanServer();
+                final javax.management.ObjectName mxbeanName = new javax.management.ObjectName(
+                    "org.opencms.mx:type=CmsDiagnosticsMXBean");
+                if (mbs.isRegistered(mxbeanName)) {
+                    mbs.unregisterMBean(mxbeanName);
+                }
+            } catch (Throwable e) {
+                CmsLog.INIT.error(e.getLocalizedMessage(), e);
             }
             m_instance = null;
         }
@@ -2801,6 +2860,12 @@ public final class OpenCmsCore {
         }
 
         try {
+            CmsQuotaManager.get().initialize(m_configAdminCms);
+        } catch (CmsException e) {
+            LOG.error(e.getLocalizedMessage(), e);
+        }
+
+        try {
             m_folderSizeTrackerFuture = m_executor.submit(
                 () -> new CmsFolderSizeTracker(m_configAdminCms, false).initialize());
         } catch (Exception e) {
@@ -2983,12 +3048,12 @@ public final class OpenCmsCore {
      */
     private synchronized CmsGwtService getGwtService(String serviceName, ServletConfig servletConfig) throws Throwable {
 
-        CmsGwtServiceContext context = m_gwtServiceContexts.get(serviceName);
+        CmsGwtServiceContext2 context = m_gwtServiceContexts.get(serviceName);
         if (context == null) {
-            context = new CmsGwtServiceContext(serviceName);
+            context = new CmsGwtServiceContext2(serviceName);
             m_gwtServiceContexts.put(serviceName, context);
         }
-        CmsGwtService gwtService = (CmsGwtService)Class.forName(serviceName).newInstance();
+        CmsGwtService gwtService = (CmsGwtService)Class.forName(serviceName).getDeclaredConstructor().newInstance();
         gwtService.init(servletConfig);
         gwtService.setContext(context);
         return gwtService;

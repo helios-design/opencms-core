@@ -46,9 +46,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Abstract dialog class for all dialogs that work on a <code>A_CmsSearchIndex</code>.<p>
@@ -78,7 +78,7 @@ public abstract class A_CmsEditSearchIndexDialog extends CmsWidgetDialog {
      *
      * It may be emtpy if we are on the new index dialog (/searchindex/new-index.jsp).<p>
      *
-     **/
+     */
     public static final String PARAM_INDEXNAME = "indexname";
 
     /** The user object that is edited on this dialog. */
@@ -273,7 +273,7 @@ public abstract class A_CmsEditSearchIndexDialog extends CmsWidgetDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

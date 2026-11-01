@@ -31,8 +31,8 @@ import org.opencms.configuration.I_CmsConfigurationParameterHandler;
 import org.opencms.file.CmsObject;
 import org.opencms.gwt.shared.I_CmsContentLoadCollectorInfo;
 
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides the methods to generate the "direct edit" HTML fragments that are inserted
@@ -123,7 +123,7 @@ public interface I_CmsDirectEditProvider extends I_CmsConfigurationParameterHand
     /**
      * Returns <code>true</code> if this provider (currently) operates in manual mode.<p>
      *
-     * In manual mode the direct edit HTML is inserted with <code>&lt;cms:enditable mode="manual" /&gt</code>
+     * In manual mode the direct edit HTML is inserted with <code>&lt;cms:enditable mode="manual" /&gt;</code>
      * tags. Otherwise the direct edit HTML is automatically inserted in the current page.<p>
      *
      * Some providers may not be able to operate in manual mode. These will always return <code>false</code>.<p>

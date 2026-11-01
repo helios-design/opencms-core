@@ -47,12 +47,12 @@ import org.opencms.workplace.explorer.CmsExplorerTypeSettings;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides methods for the customized property dialog.<p>
@@ -341,11 +341,12 @@ public class CmsPropertyCustom extends CmsPropertyAdvanced {
 
         // create NavPos select box row
         result.append(buildTableRowStart(key(Messages.GUI_CHNAV_INSERT_AFTER_0)));
-        result.append(CmsChnav.buildNavPosSelector(
-            getCms(),
-            getParamResource(),
-            disabled + " id=\"navpos\" class=\"maxwidth noborder\"",
-            getMessages()));
+        result.append(
+            CmsChnav.buildNavPosSelector(
+                getCms(),
+                getParamResource(),
+                disabled + " id=\"navpos\" class=\"maxwidth noborder\"",
+                getMessages()));
         // get the old NavPos value and store it in hidden field
         String navPos = null;
         try {
@@ -533,7 +534,7 @@ public class CmsPropertyCustom extends CmsPropertyAdvanced {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

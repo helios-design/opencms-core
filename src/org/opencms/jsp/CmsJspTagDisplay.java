@@ -63,15 +63,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-import javax.servlet.jsp.tagext.BodyTagSupport;
-
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
+import jakarta.servlet.jsp.tagext.BodyTagSupport;
 
 /**
  * The 'display' tag can be used to display a single resource using a formatter. It also allows to activate direct editing.<p>
@@ -213,6 +213,7 @@ public class CmsJspTagDisplay extends BodyTagSupport implements I_CmsJspTagParam
                             (HttpServletRequest)(context.getRequest()),
                             cms).setCacheContainerElement(element.editorHash(), element);
                     }
+                    OpenCms.getElementMarker().addStartMarker(context, element, formatter);
                     try {
                         CmsJspTagInclude.includeTagAction(
                             context,
@@ -232,6 +233,7 @@ public class CmsJspTagDisplay extends BodyTagSupport implements I_CmsJspTagParam
                             LOG.error(e.getLocalizedMessage(), e);
                         }
                     }
+                    OpenCms.getElementMarker().addEndMarker(context, element);
                     if (openedEditable) {
                         CmsJspTagEdit.insertDirectEditEnd(context);
                     }
@@ -390,7 +392,7 @@ public class CmsJspTagDisplay extends BodyTagSupport implements I_CmsJspTagParam
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.BodyTagSupport#doEndTag()
+     * @see jakarta.servlet.jsp.tagext.BodyTagSupport#doEndTag()
      */
     @Override
     public int doEndTag() throws JspException {
@@ -458,7 +460,7 @@ public class CmsJspTagDisplay extends BodyTagSupport implements I_CmsJspTagParam
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.BodyTagSupport#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.BodyTagSupport#doStartTag()
      */
     @Override
     public int doStartTag() {
@@ -518,7 +520,7 @@ public class CmsJspTagDisplay extends BodyTagSupport implements I_CmsJspTagParam
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.BodyTagSupport#release()
+     * @see jakarta.servlet.jsp.tagext.BodyTagSupport#release()
      */
     @Override
     public void release() {

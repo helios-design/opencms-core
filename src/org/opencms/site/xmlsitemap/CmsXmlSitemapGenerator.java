@@ -212,7 +212,7 @@ public class CmsXmlSitemapGenerator {
      *
      * @param link the link to change
      * @param server the server URI string
-    
+
      * @return the changed link
      */
     public static String replaceServerUri(String link, String server) {
@@ -369,16 +369,17 @@ public class CmsXmlSitemapGenerator {
     }
 
     /**
-     * Generates a sitemap and formats it as a string.<p>
+     * Generates and formats the XML sitemap as a string.<p>
      *
      * @return the sitemap XML data
      *
      * @throws CmsException if something goes wrong
      */
-    public String renderSitemap() throws CmsException {
+    public String renderSitemap() throws Exception {
+
+        List<CmsXmlSitemapUrlBean> urlBeans = generateSitemapBeans();
 
         StringBuffer buffer = new StringBuffer();
-        List<CmsXmlSitemapUrlBean> urlBeans = generateSitemapBeans();
         buffer.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         buffer.append(getUrlSetOpenTag() + "\n");
         for (CmsXmlSitemapUrlBean bean : urlBeans) {

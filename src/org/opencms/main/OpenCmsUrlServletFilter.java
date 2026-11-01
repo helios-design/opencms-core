@@ -32,18 +32,21 @@ import org.opencms.util.CmsStringUtil;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.logging.log4j.CloseableThreadContext;
+
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Implements a servlet filter for URL rewriting.
@@ -72,7 +75,7 @@ public class OpenCmsUrlServletFilter implements Filter {
      * A regex that matches if the requested URI starts with one of the default exclude prefixes
      * or a prefix listed in the value of the {@link #INIT_PARAM_ADDITIONAL_EXCLUDEPREFIXES} init-param.
      */
-    private String m_regex;
+    private Pattern m_regex;
 
     /** The servlet name, prefixed by "/". */
     private String m_servletPath;
@@ -107,7 +110,7 @@ public class OpenCmsUrlServletFilter implements Filter {
     }
 
     /**
-     * @see javax.servlet.Filter#destroy()
+     * @see jakarta.servlet.Filter#destroy()
      */
     public void destroy() {
 
@@ -119,7 +122,7 @@ public class OpenCmsUrlServletFilter implements Filter {
      * Adjusts the requested URIs by prepending the name of the {@link org.opencms.main.OpenCmsServlet},
      * if the request should be handled by that servlet.
      *
-     * @see javax.servlet.Filter#doFilter(javax.servlet.ServletRequest, javax.servlet.ServletResponse, javax.servlet.FilterChain)
+     * @see jakarta.servlet.Filter#doFilter(jakarta.servlet.ServletRequest, jakarta.servlet.ServletResponse, jakarta.servlet.FilterChain)
      */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
     throws IOException, ServletException {
@@ -140,7 +143,7 @@ public class OpenCmsUrlServletFilter implements Filter {
                 if (request instanceof HttpServletRequest) {
                     HttpServletRequest req = (HttpServletRequest)request;
                     String uri = req.getRequestURI();
-                    if (!uri.matches(m_regex)) {
+                    if (!m_regex.matcher(uri).matches()) {
                         String adjustedUri = uri.replaceFirst(m_contextPath + "/", m_servletPath);
                         req.getRequestDispatcher(adjustedUri).forward(request, response);
                         return;
@@ -152,7 +155,7 @@ public class OpenCmsUrlServletFilter implements Filter {
     }
 
     /**
-     * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
+     * @see jakarta.servlet.Filter#init(jakarta.servlet.FilterConfig)
      */
     public void init(FilterConfig filterConfig) {
 
@@ -181,9 +184,9 @@ public class OpenCmsUrlServletFilter implements Filter {
             String[] defaultExcludePrefixes = new String[] {
                 "/" + OpenCms.getStaticExportManager().getExportPathForConfiguration(),
                 "/workplace",
-                "/VAADIN/",
+                "/VAADIN",
                 m_servletPath,
-                "/resources/",
+                "/resources",
                 "/webdav",
                 "/webdav2",
                 "/cmisatom",
@@ -192,19 +195,20 @@ public class OpenCmsUrlServletFilter implements Filter {
             StringBuffer regex = new StringBuffer();
             regex.append(m_contextPath);
             regex.append('(');
-            regex.append(defaultExcludePrefixes[0]);
-            for (int i = 1; i < defaultExcludePrefixes.length; i++) {
-                regex.append('|').append(defaultExcludePrefixes[i]);
-            }
+            // combine prefixes into pipe-separated string, ensure prefixes won't match parts of words (e.g. /services_overview or similar)
+            regex.append(
+                Stream.of(defaultExcludePrefixes).map(
+                    prefix -> prefix.endsWith("/") ? prefix : prefix + "(?=/|$)").collect(Collectors.joining("|")));
             if (!((null == m_additionalExcludePrefixes) || m_additionalExcludePrefixes.isEmpty())) {
                 regex.append('|').append(m_additionalExcludePrefixes);
             }
             regex.append(')');
             regex.append(".*");
-            m_regex = regex.toString();
+            m_regex = Pattern.compile(regex.toString());
             m_isInitialized = true;
             return true;
         }
         return false;
     }
+
 }

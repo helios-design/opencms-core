@@ -30,6 +30,7 @@ package org.opencms.gwt;
 import org.opencms.ade.containerpage.CmsDetailOnlyContainerUtil;
 import org.opencms.ade.galleries.CmsPreviewService;
 import org.opencms.configuration.CmsConfigurationException;
+import org.opencms.db.CmsUserSettings;
 import org.opencms.file.CmsFile;
 import org.opencms.file.CmsObject;
 import org.opencms.file.CmsProject;
@@ -50,6 +51,7 @@ import org.opencms.file.types.CmsResourceTypePointer;
 import org.opencms.file.types.CmsResourceTypeXmlContainerPage;
 import org.opencms.file.types.CmsResourceTypeXmlContent;
 import org.opencms.file.types.CmsResourceTypeXmlPage;
+import org.opencms.gwt.shared.CmsAvailabilityInfo;
 import org.opencms.gwt.shared.CmsBrokenLinkBean;
 import org.opencms.gwt.shared.CmsClientDateBean;
 import org.opencms.gwt.shared.CmsDataViewConstants;
@@ -285,6 +287,47 @@ public class CmsVfsService extends CmsGwtService implements I_CmsVfsService {
     }
 
     /**
+     * Gets the availability info for container elements / list elements in the page editor.
+     *
+     * @param cms the current CMS context
+     * @param res the resource for which to get the availability info
+     *
+     * @return the availability info
+     */
+    public static CmsAvailabilityInfo getAvailabilityInfo(CmsObject cms, CmsResource res) {
+
+        if (res == null) {
+            return new CmsAvailabilityInfo(null, null);
+        }
+        String releasedStr = null;
+        String expiredStr = null;
+        CmsUserSettings userSettings = new CmsUserSettings(cms.getRequestContext().getCurrentUser());
+        Locale locale = OpenCms.getWorkplaceManager().getWorkplaceLocale(cms);
+        if (Boolean.parseBoolean(userSettings.getAdditionalPreference("showElementAvailability", true))) {
+            String nbsp = "\u00A0";
+            Locale wpLocale = OpenCms.getWorkplaceManager().getWorkplaceLocale(cms);
+            DateFormat dateFmt = DateFormat.getDateInstance(DateFormat.SHORT, wpLocale);
+            DateFormat timeFmt = DateFormat.getTimeInstance(DateFormat.SHORT, wpLocale);
+
+            if (res.getDateReleased() != CmsResource.DATE_RELEASED_DEFAULT) {
+                releasedStr = nbsp
+                    + dateFmt.format(new Date(res.getDateReleased()))
+                    + nbsp
+                    + nbsp
+                    + timeFmt.format(new Date(res.getDateReleased()));
+            }
+            if (res.getDateExpired() != CmsResource.DATE_EXPIRED_DEFAULT) {
+                expiredStr = nbsp
+                    + dateFmt.format(new Date(res.getDateExpired()))
+                    + nbsp
+                    + nbsp
+                    + timeFmt.format(new Date(res.getDateExpired()));
+            }
+        }
+        return new CmsAvailabilityInfo(releasedStr, expiredStr);
+    }
+
+    /**
      * Returns the no preview reason if there is any.<p>
      *
      * @param cms the current cms context
@@ -333,12 +376,12 @@ public class CmsVfsService extends CmsGwtService implements I_CmsVfsService {
     }
 
     /**
-     * Returns a bean to display the {@link org.opencms.gwt.client.ui.CmsListItemWidget} including the lock state.<p>
+     * Returns a bean to display the <code>CmsListItemWidget</code> including the lock state.<p>
      *
      * @param cms the CMS context
      * @param resource the resource to get the page info for
      *
-     * @return a bean to display the {@link org.opencms.gwt.client.ui.CmsListItemWidget}.<p>
+     * @return a bean to display the <code>CmsListItemWidget</code>.<p>
      *
      * @throws CmsLoaderException if the resource type could not be found
      * @throws CmsException if something else goes wrong
@@ -1654,11 +1697,11 @@ public class CmsVfsService extends CmsGwtService implements I_CmsVfsService {
     }
 
     /**
-     * Returns a bean to display the {@link org.opencms.gwt.client.ui.CmsListItemWidget}.<p>
+     * Returns a bean to display the <code>CmsListItemWidget</code>.<p>
      *
      * @param res the resource to get the page info for
      *
-     * @return a bean to display the {@link org.opencms.gwt.client.ui.CmsListItemWidget}.<p>
+     * @return a bean to display the <code>CmsListItemWidget</code>.<p>
      *
      * @throws CmsLoaderException if the resource type could not be found
      * @throws CmsException if something else goes wrong

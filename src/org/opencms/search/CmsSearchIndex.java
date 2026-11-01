@@ -1885,18 +1885,18 @@ public class CmsSearchIndex extends A_CmsSearchIndex {
                 doScoring = true;
             } else if ((sort == CmsSearchParameters.SORT_DATE_CREATED)
                 || (sort == CmsSearchParameters.SORT_DATE_LASTMODIFIED)) {
-                    // these default sorts don't need score calculation
-                    doScoring = false;
-                } else {
-                    // for all non-defaults: check if the score field is present, in that case we must calculate the score
-                    SortField[] fields = sort.getSort();
-                    for (SortField field : fields) {
-                        if (field == SortField.FIELD_SCORE) {
-                            doScoring = true;
-                            break;
-                        }
+                // these default sorts don't need score calculation
+                doScoring = false;
+            } else {
+                // for all non-defaults: check if the score field is present, in that case we must calculate the score
+                SortField[] fields = sort.getSort();
+                for (SortField field : fields) {
+                    if (field == SortField.FIELD_SCORE) {
+                        doScoring = true;
+                        break;
                     }
                 }
+            }
         }
         return doScoring;
     }
@@ -1920,11 +1920,6 @@ public class CmsSearchIndex extends A_CmsSearchIndex {
             return false;
         }
 
-        if (!I_CmsSearchDocument.VFS_DOCUMENT_KEY_PREFIX.equals(doc.getType())
-            && !OpenCms.getResourceManager().hasResourceType(doc.getType())) {
-            // this is an unknown VFS resource type (also not the generic "VFS" type of OpenCms before 7.0)
-            return false;
-        }
         return true;
     }
 

@@ -36,8 +36,7 @@ import org.opencms.file.types.CmsResourceTypePlain;
 import org.opencms.gwt.CmsUsedCategoriesList;
 import org.opencms.main.OpenCms;
 import org.opencms.test.I_CmsLogHandler;
-import org.opencms.test.OpenCmsTestCase;
-import org.opencms.test.OpenCmsTestProperties;
+import org.opencms.test.OpenCmsTestRunner;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,32 +48,26 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.OpenCmsTestLogAppender;
 
-import com.google.common.collect.Sets;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 
-import junit.extensions.TestSetup;
-import junit.framework.Test;
-import junit.framework.TestResult;
-import junit.framework.TestSuite;
+import com.google.common.collect.Sets;
 
 /**
  * Tests for the memory monitor.<p>
  *
  * @since 6.0.0
  */
-public class TestCategories extends OpenCmsTestCase {
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class TestCategories extends OpenCmsTestRunner {
 
     /** Stores an error. */
     private static String m_storedError;
-
-    /**
-     * Default JUnit constructor.<p>
-     *
-     * @param arg0 JUnit parameters
-     */
-    public TestCategories(String arg0) {
-
-        super(arg0);
-    }
 
     /**
      * Stores an error message which will cause the test to fail.<p>
@@ -86,66 +79,23 @@ public class TestCategories extends OpenCmsTestCase {
         m_storedError = error;
     }
 
-    /**
-     * Test suite for this test class.<p>
-     *
-     * @return the test suite
-     */
-    public static Test suite() {
+    @Override
+    @BeforeAll
+    public void $openCmsSetUp(TestInfo testInfo) {
 
-        OpenCmsTestProperties.initialize(org.opencms.test.AllTests.TEST_PROPERTIES_PATH);
-
-        TestSuite suite = new TestSuite();
-        suite.setName(TestCategories.class.getName());
-
-        // the order is important
-        suite.addTest(new TestCategories("testCategoryTree"));
-        suite.addTest(new TestCategories("testCategoryTreeAssign"));
-        suite.addTest(new TestCategories("testCategoryBaseFolder"));
-        suite.addTest(new TestCategories("testCategoryBaseFolderRepair"));
-        suite.addTest(new TestCategories("testCategoryBaseFolderAssign"));
-        suite.addTest(new TestCategories("testCategoryConflict"));
-        suite.addTest(new TestCategories("testCategoryConflictAssign"));
-        suite.addTest(new TestCategories("testCategoryConflictRepair"));
-        suite.addTest(new TestCategories("testCopyValid"));
-        // TODO: some more test cases, copyInvalid, moveValid, moveInvalid
-        suite.addTest(new TestCategories("testPublishMovedResourceWithCategories1"));
-        suite.addTest(new TestCategories("testPublishMovedResourceWithCategories2"));
-        suite.addTest(new TestCategories("testMoveParentFolder"));
-
-        suite.addTest(new TestCategories("testAdditionalRepository"));
-        suite.addTest(new TestCategories("testUsedCategoriesList"));
-
-        TestSetup wrapper = new TestSetup(suite) {
-
-            @Override
-            protected void setUp() {
-
-                setupOpenCms("simpletest", "/");
-            }
-
-            @Override
-            protected void tearDown() {
-
-                removeOpenCms();
-            }
-        };
-
-        return wrapper;
+        setupOpenCms(testInfo, "simpletest", "/");
     }
 
     /**
-     * @see junit.framework.TestCase#run(junit.framework.TestResult)
+     * Checks for errors stored from background threads after each test.<p>
      */
-    @Override
-    public void run(TestResult result) {
+    @AfterEach
+    public void checkStoredError() {
 
-        super.run(result);
-        // We do this to fail the test if there is an error log message inside a different thread
         if (m_storedError != null) {
             String error = m_storedError;
             m_storedError = null;
-            result.addError(this, new RuntimeException(error));
+            throw new RuntimeException(error);
         }
     }
 
@@ -154,6 +104,8 @@ public class TestCategories extends OpenCmsTestCase {
      *
      * @throws Exception -
      */
+    @Test
+    @Order(13)
     public void testAdditionalRepository() throws Exception {
 
         CmsObject cms = getCmsObject();
@@ -228,6 +180,8 @@ public class TestCategories extends OpenCmsTestCase {
      * @throws Exception if something goes wrong
      */
     @SuppressWarnings("deprecation")
+    @Test
+    @Order(3)
     public void testCategoryBaseFolder() throws Exception {
 
         System.out.println("Testing changing the base folder name of the category repositories.");
@@ -299,6 +253,8 @@ public class TestCategories extends OpenCmsTestCase {
      *
      * @throws Exception if something goes wrong
      */
+    @Test
+    @Order(5)
     public void testCategoryBaseFolderAssign() throws Exception {
 
         System.out.println(
@@ -395,6 +351,8 @@ public class TestCategories extends OpenCmsTestCase {
      *
      * @throws Exception if something goes wrong
      */
+    @Test
+    @Order(4)
     public void testCategoryBaseFolderRepair() throws Exception {
 
         System.out.println(
@@ -505,6 +463,8 @@ public class TestCategories extends OpenCmsTestCase {
      *
      * @throws Exception if something goes wrong
      */
+    @Test
+    @Order(6)
     public void testCategoryConflict() throws Exception {
 
         System.out.println("Testing the categories when several repositories define the same category.");
@@ -556,6 +516,8 @@ public class TestCategories extends OpenCmsTestCase {
      *
      * @throws Exception if something goes wrong
      */
+    @Test
+    @Order(7)
     public void testCategoryConflictAssign() throws Exception {
 
         System.out.println("Testing the categories assignment when several repositories define the same category.");
@@ -599,6 +561,8 @@ public class TestCategories extends OpenCmsTestCase {
      *
      * @throws Exception if something goes wrong
      */
+    @Test
+    @Order(8)
     public void testCategoryConflictRepair() throws Exception {
 
         System.out.println("Testing resource categories reparation after deleting/adding a centralized category.");
@@ -735,6 +699,8 @@ public class TestCategories extends OpenCmsTestCase {
      * @throws Exception if something goes wrong
      */
     @SuppressWarnings("deprecation")
+    @Test
+    @Order(1)
     public void testCategoryTree() throws Exception {
 
         System.out.println("Testing the category tree access with different repositories.");
@@ -848,6 +814,8 @@ public class TestCategories extends OpenCmsTestCase {
      *
      * @throws Exception if something goes wrong
      */
+    @Test
+    @Order(2)
     public void testCategoryTreeAssign() throws Exception {
 
         System.out.println("Testing the category assignment with different repositories.");
@@ -989,6 +957,8 @@ public class TestCategories extends OpenCmsTestCase {
      * @throws Exception if something goes wrong
      */
     @SuppressWarnings("deprecation")
+    @Test
+    @Order(9)
     public void testCopyValid() throws Exception {
 
         System.out.println(
@@ -1041,6 +1011,8 @@ public class TestCategories extends OpenCmsTestCase {
      * @throws Exception in case the test fails
      */
     @SuppressWarnings("deprecation")
+    @Test
+    @Order(12)
     public void testMoveParentFolder() throws Exception {
 
         CmsObject cms = OpenCms.initCmsObject(getCmsObject());
@@ -1072,6 +1044,8 @@ public class TestCategories extends OpenCmsTestCase {
      * @throws Exception in case the test fails
      */
     @SuppressWarnings("deprecation")
+    @Test
+    @Order(10)
     public void testPublishMovedResourceWithCategories1() throws Exception {
 
         CmsObject cms = OpenCms.initCmsObject(getCmsObject());
@@ -1121,6 +1095,8 @@ public class TestCategories extends OpenCmsTestCase {
      * @throws Exception in case the test fails
      */
     @SuppressWarnings("deprecation")
+    @Test
+    @Order(11)
     public void testPublishMovedResourceWithCategories2() throws Exception {
 
         CmsObject cms = OpenCms.initCmsObject(getCmsObject());
@@ -1162,10 +1138,145 @@ public class TestCategories extends OpenCmsTestCase {
     }
 
     /**
+     * Tests that removing a category from a resource also removes its subcategories from that resource.
+     *
+     * @throws Exception if something goes wrong
+     */
+    @Test
+    public void testRemovingCategoryAlsoRemovesSubcategories() throws Exception {
+
+        CmsObject cms = getCmsObject();
+        CmsCategoryService service = CmsCategoryService.getInstance();
+
+        CmsCategory parent = service.createCategory(
+            cms,
+            null,
+            "relation-delete-parent",
+            "relation-delete-parent",
+            null,
+            null);
+        CmsCategory child = service.createCategory(cms, parent, "child", "relation-delete-child", null, null);
+        String resourcePath = "/category-subcategory-relation-delete-scope.txt";
+        cms.createResource(resourcePath, CmsResourceTypePlain.getStaticTypeId());
+        cms.lockResource(resourcePath);
+
+        service.addResourceToCategory(cms, resourcePath, child);
+        assertCategoryPaths(service.readResourceCategories(cms, resourcePath), parent.getPath(), child.getPath());
+
+        service.removeResourceFromCategory(cms, resourcePath, parent);
+
+        assertCategoryPaths(service.readResourceCategories(cms, resourcePath));
+    }
+
+    /**
+     * Tests that removing a category from a folder does not remove it from resources below that folder.
+     *
+     * @throws Exception if something goes wrong
+     */
+    @Test
+    public void testRemovingCategoryDoesNotAffectChildResources() throws Exception {
+
+        CmsObject cms = getCmsObject();
+        CmsCategoryService service = CmsCategoryService.getInstance();
+
+        CmsCategory category = service.createCategory(
+            cms,
+            null,
+            "relation-delete-scope",
+            "relation-delete-scope",
+            null,
+            null);
+        String folderPath = "/category-relation-delete-scope/";
+        String childPath = folderPath + "child.txt";
+        cms.createResource(folderPath, CmsResourceTypeFolder.getStaticTypeId());
+        cms.createResource(childPath, CmsResourceTypePlain.getStaticTypeId());
+        cms.lockResource(folderPath);
+        cms.lockResource(childPath);
+
+        service.addResourceToCategory(cms, folderPath, category);
+        service.addResourceToCategory(cms, childPath, category);
+        assertCategoryPaths(service.readResourceCategories(cms, folderPath), category.getPath());
+        assertCategoryPaths(service.readResourceCategories(cms, childPath), category.getPath());
+
+        service.removeResourceFromCategory(cms, folderPath, category);
+
+        assertCategoryPaths(service.readResourceCategories(cms, folderPath));
+        assertCategoryPaths(service.readResourceCategories(cms, childPath), category.getPath());
+    }
+
+    /**
+     * Tests that removing a category does not remove categories whose paths merely have the same string prefix.
+     *
+     * @throws Exception if something goes wrong
+     */
+    @Test
+    public void testRemovingCategoryDoesNotAffectPrefixSibling() throws Exception {
+
+        CmsObject cms = getCmsObject();
+        CmsCategoryService service = CmsCategoryService.getInstance();
+
+        CmsCategory root = service.createCategory(
+            cms,
+            null,
+            "relation-prefix-root",
+            "relation-prefix-root",
+            null,
+            null);
+        CmsCategory category = service.createCategory(cms, root, "bar", "bar", null, null);
+        CmsCategory prefixSibling = service.createCategory(cms, root, "bar-x", "bar-x", null, null);
+        String resourcePath = "/category-prefix-relation-delete-scope.txt";
+        cms.createResource(resourcePath, CmsResourceTypePlain.getStaticTypeId());
+        cms.lockResource(resourcePath);
+
+        service.addResourceToCategory(cms, resourcePath, category);
+        service.addResourceToCategory(cms, resourcePath, prefixSibling);
+        assertCategoryPaths(
+            service.readResourceCategories(cms, resourcePath),
+            root.getPath(),
+            category.getPath(),
+            prefixSibling.getPath());
+
+        service.removeResourceFromCategory(cms, resourcePath, category);
+
+        assertCategoryPaths(service.readResourceCategories(cms, resourcePath), root.getPath(), prefixSibling.getPath());
+    }
+
+    /**
+     * Tests that underscores are correctly escaped when trying to remove categories with file names containing them.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testUnderscoresInCategoriesToBeRemoved() throws Exception {
+
+        CmsObject cms = getCmsObject();
+        CmsCategoryService service = CmsCategoryService.getInstance();
+
+        CmsCategory hyphenCategory = service.createCategory(cms, null, "foo-bar", "foo-bar", null, null);
+        CmsCategory underscoreCategory = service.createCategory(cms, null, "foo_bar", "foo_bar", null, null);
+        assertNotEquals(hyphenCategory.getId(), underscoreCategory.getId());
+        String resourcePath = "/category-relation-wildcards.txt";
+        cms.createResource(
+            resourcePath,
+            OpenCms.getResourceManager().getResourceType(CmsResourceTypePlain.getStaticTypeName()));
+        cms.lockResource(resourcePath);
+
+        service.addResourceToCategory(cms, resourcePath, hyphenCategory);
+        service.addResourceToCategory(cms, resourcePath, underscoreCategory);
+        assertCategoryPaths(service.readResourceCategories(cms, resourcePath), "foo-bar/", "foo_bar/");
+
+        service.removeResourceFromCategory(cms, resourcePath, underscoreCategory);
+
+        assertCategoryPaths(service.readResourceCategories(cms, resourcePath), "foo-bar/");
+    }
+
+    /**
      * Simple test for the used category list data structure.
      *
      * @throws Exception
      */
+    @Test
+    @Order(14)
     public void testUsedCategoriesList() throws Exception {
 
         CmsUsedCategoriesList list = new CmsUsedCategoriesList();
@@ -1180,6 +1291,18 @@ public class TestCategories extends OpenCmsTestCase {
         String json = list.toJson();
         list = CmsUsedCategoriesList.fromJson(json);
         assertEquals(new HashSet<>(Arrays.asList("bar", "qux", "xyzzy")), list.getCategories());
+    }
+
+    /**
+     * Checks the paths of the given categories.
+     *
+     * @param categories the categories
+     * @param expectedPaths the expected paths
+     */
+    private void assertCategoryPaths(List<CmsCategory> categories, String... expectedPaths) {
+
+        Set<String> actualPaths = categories.stream().map(CmsCategory::getPath).collect(Collectors.toSet());
+        assertEquals(Set.of(expectedPaths), actualPaths);
     }
 
 }

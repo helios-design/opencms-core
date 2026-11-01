@@ -44,11 +44,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A report for displaying the rebuild process of the corresponding
@@ -61,11 +61,11 @@ public class CmsRebuildReport extends A_CmsListReport {
     /** Indexes parameter: Value is a list of comma separated search index name. */
     public static final String PARAM_INDEXES = "indexes";
 
-    /** The request parameter value for search indexes: comma-separated names. **/
-    private String m_paramIndexes;
-
     /** The log object for this class. */
     private static final Log LOG = CmsLog.getLog(CmsRebuildReport.class);
+
+    /** The request parameter value for search indexes: comma-separated names. **/
+    private String m_paramIndexes;
 
     /**
      * Public constructor with JSP action element.<p>
@@ -145,7 +145,7 @@ public class CmsRebuildReport extends A_CmsListReport {
 
     /**
      *
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

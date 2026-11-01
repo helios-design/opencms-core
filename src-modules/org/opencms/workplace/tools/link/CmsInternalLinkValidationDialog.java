@@ -44,9 +44,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Dialog in the administration view, to edit the resources to check the internal links for.<p>
@@ -175,14 +175,15 @@ public class CmsInternalLinkValidationDialog extends CmsWidgetDialog {
         setKeyPrefix(KEY_PREFIX);
 
         // widgets to display
-        addWidget(new CmsWidgetDialogParameter(
-            this,
-            "resources",
-            "/",
-            PAGES[0],
-            new CmsVfsFileWidget(false, null),
-            1,
-            CmsWidgetDialogParameter.MAX_OCCURENCES));
+        addWidget(
+            new CmsWidgetDialogParameter(
+                this,
+                "resources",
+                "/",
+                PAGES[0],
+                new CmsVfsFileWidget(false, null),
+                1,
+                CmsWidgetDialogParameter.MAX_OCCURENCES));
     }
 
     /**
@@ -238,7 +239,7 @@ public class CmsInternalLinkValidationDialog extends CmsWidgetDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

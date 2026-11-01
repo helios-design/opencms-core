@@ -112,7 +112,7 @@ public abstract class A_CmsStaticExportHandler implements I_CmsStaticExportHandl
     private static final Log LOG = CmsLog.getLog(A_CmsStaticExportHandler.class);
 
     /** Indicates if this content handler is busy. */
-    protected boolean m_busy;
+    protected volatile boolean m_busy;
 
     /**
      * @see org.opencms.staticexport.I_CmsStaticExportHandler#isBusy()
@@ -581,17 +581,16 @@ public abstract class A_CmsStaticExportHandler implements I_CmsStaticExportHandl
                 } else if (targetId.equals(source.getStructureId())
                     && OpenCms.getResourceManager().getResourceType(source.getTypeId()).getTypeName().equals(
                         CmsResourceTypeXmlContainerPage.GROUP_CONTAINER_TYPE_NAME)) {
-                            LOG.warn(
-                                Messages.get().getBundle().key(
-                                    Messages.LOG_WARN_ELEMENT_GROUP_REFERENCES_SELF_1,
-                                    source.getRootPath()));
-                        } else
-                    if (OpenCms.getResourceManager().getResourceType(source.getTypeId()).getTypeName().equals(
-                        CmsResourceTypeXmlContainerPage.GROUP_CONTAINER_TYPE_NAME)) {
-                            // purge pages containing group containers containing the content
+                    LOG.warn(
+                        Messages.get().getBundle().key(
+                            Messages.LOG_WARN_ELEMENT_GROUP_REFERENCES_SELF_1,
+                            source.getRootPath()));
+                } else if (OpenCms.getResourceManager().getResourceType(source.getTypeId()).getTypeName().equals(
+                    CmsResourceTypeXmlContainerPage.GROUP_CONTAINER_TYPE_NAME)) {
+                    // purge pages containing group containers containing the content
 
-                            purgePages.addAll(getContainerPagesToPurge(cms, source.getStructureId()));
-                        }
+                    purgePages.addAll(getContainerPagesToPurge(cms, source.getStructureId()));
+                }
             }
             return purgePages;
         } catch (CmsException e) {

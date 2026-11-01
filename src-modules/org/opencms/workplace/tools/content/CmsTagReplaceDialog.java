@@ -44,10 +44,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Widget dialog that sets the settings to replace HTML Tags in pages below a folder.
@@ -135,8 +135,9 @@ public class CmsTagReplaceDialog extends CmsWidgetDialog {
         result.append(createWidgetErrorHeader());
 
         // create export file name block
-        result.append(createWidgetBlockStart(
-            Messages.get().getBundle(getLocale()).key(Messages.GUI_TAGREPLACE_DIALOG_BLOCK_SETTINGS_0)));
+        result.append(
+            createWidgetBlockStart(
+                Messages.get().getBundle(getLocale()).key(Messages.GUI_TAGREPLACE_DIALOG_BLOCK_SETTINGS_0)));
         result.append(createDialogRowsHtml(0, 2));
         result.append(createWidgetBlockEnd());
 
@@ -222,7 +223,7 @@ public class CmsTagReplaceDialog extends CmsWidgetDialog {
 
     /**
      * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings,
-     *      javax.servlet.http.HttpServletRequest)
+     *      jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

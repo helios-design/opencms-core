@@ -49,9 +49,9 @@ import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Displays the result of a <code>{@link org.opencms.search.CmsSearch}</code>.<p>
@@ -273,9 +273,10 @@ public class CmsSearchResultView {
                     result.append("<a class=\"searchlink\" href=\"");
                     result.append(
                         getSearchPageLink(
-                            m_jsp.link(new StringBuffer(search.getPreviousUrl()).append('&').append(
-                                CmsLocaleManager.PARAMETER_LOCALE).append("=").append(
-                                    m_jsp.getRequestContext().getLocale()).toString()),
+                            m_jsp.link(
+                                new StringBuffer(search.getPreviousUrl()).append('&').append(
+                                    CmsLocaleManager.PARAMETER_LOCALE).append("=").append(
+                                        m_jsp.getRequestContext().getLocale()).toString()),
                             search));
                     result.append("\">");
                     result.append(messages.key(org.opencms.search.Messages.GUI_HELP_BUTTON_BACK_0));
@@ -290,9 +291,10 @@ public class CmsSearchResultView {
                     if (pageNumber != search.getSearchPage()) {
                         result.append("<a class=\"searchlink\" href=\"").append(
                             getSearchPageLink(
-                                m_jsp.link(new StringBuffer(pageLinks.get(Integer.valueOf(pageNumber))).append('&').append(
-                                    CmsLocaleManager.PARAMETER_LOCALE).append("=").append(
-                                        m_jsp.getRequestContext().getLocale()).toString()),
+                                m_jsp.link(
+                                    new StringBuffer(pageLinks.get(Integer.valueOf(pageNumber))).append('&').append(
+                                        CmsLocaleManager.PARAMETER_LOCALE).append("=").append(
+                                            m_jsp.getRequestContext().getLocale()).toString()),
                                 search));
                         result.append("\" target=\"_self\">").append(pageNumber).append("</a>\n");
                     } else {

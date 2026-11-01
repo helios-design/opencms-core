@@ -106,13 +106,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.collections.Buffer;
 import org.apache.commons.logging.Log;
 
 import com.vaadin.ui.Component;
 import com.vaadin.ui.Window;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Provides general core services.<p>
@@ -859,7 +859,7 @@ public class CmsCoreService extends CmsGwtService implements I_CmsCoreService {
     }
 
     /**
-     * @see org.opencms.gwt.shared.rpc.I_CmsCoreService#getCategories(java.lang.String, boolean, java.lang.String, boolean)
+     * @see org.opencms.gwt.shared.rpc.I_CmsCoreService#getCategories(java.lang.String, boolean, java.lang.String, boolean, java.util.Set)
      */
     public List<CmsCategoryTreeEntry> getCategories(
         String fromPath,
@@ -1406,7 +1406,7 @@ public class CmsCoreService extends CmsGwtService implements I_CmsCoreService {
             for (CmsCategory category : previousCategories) {
                 if (categories.contains(category.getPath())) {
                     categories.remove(category.getPath());
-                } else {
+                } else if (categories.stream().noneMatch(c -> c.startsWith(category.getPath()))) {
                     catService.removeResourceFromCategory(cms, sitePath, category);
                 }
             }
@@ -1592,7 +1592,7 @@ public class CmsCoreService extends CmsGwtService implements I_CmsCoreService {
      * @return the resource categories
      *
      * @throws CmsRpcException if something goes wrong
-    
+     *
      *
      * @return
      * @throws CmsRpcException

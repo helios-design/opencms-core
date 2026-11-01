@@ -50,10 +50,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Widget dialog that collects the folders and the languages for XML content language node copy operation.
@@ -334,22 +334,24 @@ public class CmsLanguageCopyFolderAndLanguageSelectDialog extends CmsWidgetDialo
         setKeyPrefix(KEY_PREFIX);
         List<CmsSelectWidgetOption> options = getLanguageSelections();
 
-        addWidget(new CmsWidgetDialogParameter(
-            m_dialogSettings,
-            "message",
-            key(Messages.GUI_LANGUAGECOPY_SELECTLANGUAGE_DIALOG_MESSAGE_0),
-            PAGES[0],
-            new CmsDisplayWidget(),
-            1,
-            1));
-        addWidget(new CmsWidgetDialogParameter(
-            m_dialogSettings,
-            "paths",
-            "/",
-            PAGES[0],
-            new CmsVfsFileWidget(false, getCms().getRequestContext().getSiteRoot()),
-            1,
-            CmsWidgetDialogParameter.MAX_OCCURENCES));
+        addWidget(
+            new CmsWidgetDialogParameter(
+                m_dialogSettings,
+                "message",
+                key(Messages.GUI_LANGUAGECOPY_SELECTLANGUAGE_DIALOG_MESSAGE_0),
+                PAGES[0],
+                new CmsDisplayWidget(),
+                1,
+                1));
+        addWidget(
+            new CmsWidgetDialogParameter(
+                m_dialogSettings,
+                "paths",
+                "/",
+                PAGES[0],
+                new CmsVfsFileWidget(false, getCms().getRequestContext().getSiteRoot()),
+                1,
+                CmsWidgetDialogParameter.MAX_OCCURENCES));
         addWidget(
             new CmsWidgetDialogParameter(m_dialogSettings, "delete", "false", PAGES[0], new CmsCheckboxWidget(), 1, 1));
         addWidget(
@@ -395,7 +397,7 @@ public class CmsLanguageCopyFolderAndLanguageSelectDialog extends CmsWidgetDialo
 
     /**
      * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings,
-     *      javax.servlet.http.HttpServletRequest)
+     *      jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(final CmsWorkplaceSettings settings, final HttpServletRequest request) {

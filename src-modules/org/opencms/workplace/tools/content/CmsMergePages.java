@@ -49,10 +49,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides methods for the merge pages dialog.<p>
@@ -313,7 +313,7 @@ public class CmsMergePages extends CmsReport {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {
@@ -428,7 +428,10 @@ public class CmsMergePages extends CmsReport {
         int size = folderResources.size();
         // now loop through all resources and check them against those in the target merge folder
         m_report.println(
-            Messages.get().container(Messages.RPT_SCAN_PAGES_IN_FOLDER_BEGIN_2, sourceMergeFolder, Integer.valueOf(size)),
+            Messages.get().container(
+                Messages.RPT_SCAN_PAGES_IN_FOLDER_BEGIN_2,
+                sourceMergeFolder,
+                Integer.valueOf(size)),
             I_CmsReport.FORMAT_HEADLINE);
         int count = 1;
         while (i.hasNext()) {
@@ -604,10 +607,12 @@ public class CmsMergePages extends CmsReport {
                         resFolder1Name,
                         getParamFolder1(),
                         getParamFolder2());
-                    m_report.print(org.opencms.report.Messages.get().container(
-                        org.opencms.report.Messages.RPT_SUCCESSION_2,
-                        String.valueOf(count++),
-                        String.valueOf(size)), I_CmsReport.FORMAT_NOTE);
+                    m_report.print(
+                        org.opencms.report.Messages.get().container(
+                            org.opencms.report.Messages.RPT_SUCCESSION_2,
+                            String.valueOf(count++),
+                            String.valueOf(size)),
+                        I_CmsReport.FORMAT_NOTE);
                     m_report.print(Messages.get().container(Messages.RPT_PROCESS_0), I_CmsReport.FORMAT_NOTE);
                     m_report.print(
                         org.opencms.report.Messages.get().container(

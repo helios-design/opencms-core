@@ -36,8 +36,8 @@ import org.opencms.xml.containerpage.CmsContainerElementBean;
 
 import java.util.Collections;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Utility class for PDF formatting.<p>
@@ -69,7 +69,8 @@ public final class CmsPdfFormatterUtils {
         HttpServletRequest request,
         HttpServletResponse response,
         CmsResource jsp,
-        CmsResource content) throws Exception {
+        CmsResource content)
+    throws Exception {
 
         CmsTemplateLoaderFacade loaderFacade = new CmsTemplateLoaderFacade(
             OpenCms.getResourceManager().getLoader(jsp),

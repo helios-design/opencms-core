@@ -41,11 +41,11 @@ import org.opencms.util.CmsStringUtil;
 import java.lang.reflect.Constructor;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Action element class for displaying the XML sitemap from a JSP.<p>
@@ -81,6 +81,7 @@ public class CmsXmlSitemapActionElement extends CmsJspActionElement {
      *
      * @param className the class name of the sitemap generator (may be null for the default
      * @param folderRootPath the root path of the start folder for the sitemap
+     *
      * @return the sitemap generator instance
      *
      * @throws CmsException if something goes wrong

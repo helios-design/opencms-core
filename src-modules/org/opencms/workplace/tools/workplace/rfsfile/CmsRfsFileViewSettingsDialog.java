@@ -47,9 +47,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedMap;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A <code>{@link org.opencms.workplace.CmsWidgetDialog}</code> that allows
@@ -242,11 +242,12 @@ public class CmsRfsFileViewSettingsDialog extends A_CmsRfsFileWidgetDialog {
                 null,
                 key(Messages.GUI_WORKPLACE_LOGVIEW_FILE_LOG_HELP_0)));
         // opencms.properties
-        result.add(new CmsSelectWidgetOption(
-            sysInfo.getConfigurationFileRfsPath(),
-            false,
-            null,
-            key(Messages.GUI_WORKPLACE_LOGVIEW_FILE_CONF_HELP_0)));
+        result.add(
+            new CmsSelectWidgetOption(
+                sysInfo.getConfigurationFileRfsPath(),
+                false,
+                null,
+                key(Messages.GUI_WORKPLACE_LOGVIEW_FILE_CONF_HELP_0)));
         // config xml
         String configPath = sysInfo.getConfigFolder();
         if (configPath != null) {

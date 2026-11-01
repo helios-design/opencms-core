@@ -38,11 +38,11 @@ import org.opencms.main.CmsLog;
 import org.opencms.main.OpenCms;
 import org.opencms.site.CmsSiteMatcher;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -51,21 +51,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItem;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.core.FileUploadException;
+import org.apache.commons.fileupload2.jakarta.servlet5.JakartaServletDiskFileUpload;
+import org.apache.commons.fileupload2.jakarta.servlet5.JakartaServletFileUpload;
 import org.apache.commons.logging.Log;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * Provides utility functions for dealing with values a <code>{@link HttpServletRequest}</code>.<p>
@@ -77,8 +81,14 @@ public final class CmsRequestUtil {
     /** Request attribute that contains the original error code. */
     public static final String ATTRIBUTE_ERRORCODE = "org.opencms.util.CmsErrorCode";
 
+    /** Flag to enable / disable backlink checks. */
+    public static boolean backlinkCheckEnabled = true;
+
     /** HTTP Accept Header for the cms:device-tag. */
     public static final String HEADER_ACCEPT = "Accept";
+
+    /** HTTP Header "Accept-Ranges". */
+    public static final String HEADER_ACCEPT_RANGES = "Accept-Ranges";
 
     /** HTTP Accept-Charset Header for internal requests used during static export. */
     public static final String HEADER_ACCEPT_CHARSET = "Accept-Charset";
@@ -95,14 +105,29 @@ public final class CmsRequestUtil {
     /** The "Content-Disposition" http header. */
     public static final String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
 
+    /** The "Content-Length" http header. */
+    public static final String HEADER_CONTENT_LENGTH = "Content-Length";
+
+    /** The "Content-Range" http header. */
+    public static final String HEADER_CONTENT_RANGE = "Content-Range";
+
     /** The "Content-Type" http header. */
     public static final String HEADER_CONTENT_TYPE = "Content-Type";
+
+    /** HTTP Header "ETag". */
+    public static final String HEADER_ETAG = "ETag";
 
     /** HTTP Header "Expires". */
     public static final String HEADER_EXPIRES = "Expires";
 
+    /** HTTP Header "If-Range". */
+    public static final String HEADER_IF_RANGE = "If-Range";
+
     /** HTTP Header "If-Modified-Since". */
     public static final String HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
+
+    /** HTTP Header "If-None-Match". */
+    public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
 
     /** The Header that stores the session id (used by OpenCms upload applet). */
     public static final String HEADER_JSESSIONID = "JSESSIONID";
@@ -118,6 +143,9 @@ public final class CmsRequestUtil {
 
     /** HTTP Header "Pragma". */
     public static final String HEADER_PRAGMA = "Pragma";
+
+    /** HTTP Header "Range". */
+    public static final String HEADER_RANGE = "Range";
 
     /** HTTP Header "Server". */
     public static final String HEADER_SERVER = "Server";
@@ -158,9 +186,6 @@ public final class CmsRequestUtil {
     /** The log object for this class. */
     private static final Log LOG = CmsLog.getLog(CmsRequestUtil.class);
 
-    /** Flag to enable / disable backlink checks. */
-    public static boolean backlinkCheckEnabled = true;
-
     /**
      * Default constructor (empty), private because this class has only
      * static methods.<p>
@@ -174,7 +199,7 @@ public final class CmsRequestUtil {
      * Appends a request parameter to the given URL.<p>
      *
      * This method takes care about the adding the parameter as an additional
-     * parameter (appending <code>&param=value</code>) or as the first parameter
+     * parameter (appending <code>&amp;param=value</code>) or as the first parameter
      * (appending <code>?param=value</code>).<p>
      *
      * @param url the URL where to append the parameter to
@@ -211,7 +236,7 @@ public final class CmsRequestUtil {
      * simple <code>String</code> values.<p>
      *
      * This method takes care about the adding the parameter as an additional
-     * parameter (appending <code>&param=value</code>) or as the first parameter
+     * parameter (appending <code>&amp;param=value</code>) or as the first parameter
      * (appending <code>?param=value</code>).<p>
      *
      * @param url the URL where to append the parameter to
@@ -436,7 +461,7 @@ public final class CmsRequestUtil {
 
     /**
      * Returns all parameters of the given request
-     * as a request parameter URL String, that is in the form <code>key1=value1&key2=value2</code> etc.
+     * as a request parameter URL String, that is in the form <code>key1=value1&amp;key2=value2</code> etc.
      *
      * The result will be encoded using the <code>{@link CmsEncoder#encode(String)}</code> function.<p>
      *
@@ -539,8 +564,8 @@ public final class CmsRequestUtil {
         HttpServletResponse res)
     throws IOException, ServletException {
 
-        // cast the request back to a flex request so the parameter map can be accessed
-        CmsFlexRequest f_req = (CmsFlexRequest)req;
+        // get the flex request (which the servlet container may have wrapped) so the parameter map can be accessed
+        CmsFlexRequest f_req = getFlexRequest(req);
         // set the parameters
         f_req.setParameterMap(params);
         // check for links "into" OpenCms, these may need the webapp name to be removed
@@ -578,8 +603,9 @@ public final class CmsRequestUtil {
      */
     public static Map<String, Object> getAttributeMap(ServletRequest req) {
 
-        if (req instanceof CmsFlexRequest) {
-            return ((CmsFlexRequest)req).getAttributeMap();
+        CmsFlexRequest flexReq = getFlexRequest(req);
+        if (flexReq != null) {
+            return flexReq.getAttributeMap();
         }
         Map<String, Object> attrs = new HashMap<String, Object>();
         Enumeration<String> atrrEnum = CmsCollectionsGenericWrapper.enumeration(req.getAttributeNames());
@@ -621,6 +647,48 @@ public final class CmsRequestUtil {
             }
         }
         return null;
+    }
+
+    /**
+     * Tries to extract a wrapped CmsFlexRequest from a potentially nested servlet request object.
+     *
+     * @param request the request to get the flex request from
+     * @return the flex request, or null if none was found
+     */
+    public static CmsFlexRequest getFlexRequest(ServletRequest request) {
+
+        while ((request != null) && !(request instanceof CmsFlexRequest)) {
+            if (request instanceof HttpServletRequestWrapper) {
+                request = ((HttpServletRequestWrapper)request).getRequest();
+            } else {
+                // container response implementation that's not a wrapper
+                return null;
+            }
+        }
+
+        // works for both cases of the while loop exit condition
+        return (CmsFlexRequest)request;
+    }
+
+    /**
+     * Tries to extract a wrapped CmsFlexResponse from a potentially nested servlet response object.
+     *
+     * @param response the response to get the flex response from
+     * @return the flex response, or null if none was found
+     */
+    public static CmsFlexResponse getFlexResponse(ServletResponse response) {
+
+        while ((response != null) && !(response instanceof CmsFlexResponse)) {
+            if (response instanceof HttpServletResponseWrapper) {
+                response = ((HttpServletResponseWrapper)response).getResponse();
+            } else {
+                // container response implementation that's not a wrapper
+                return null;
+            }
+        }
+
+        // works for both cases of the while loop exit condition
+        return (CmsFlexResponse)response;
     }
 
     /**
@@ -686,6 +754,26 @@ public final class CmsRequestUtil {
             result = null;
         }
         return result;
+    }
+
+    /**
+     * Returns a map with all request parameters.<p>
+     *
+     * If the given request wraps a flex request, the parameters of that flex request are returned:
+     * a request wrapper added by the servlet container does not necessarily report the parameters
+     * of the request it wraps.<p>
+     *
+     * @param req the request
+     *
+     * @return the parameter map
+     */
+    public static Map<String, String[]> getParameterMap(ServletRequest req) {
+
+        CmsFlexRequest flexReq = getFlexRequest(req);
+        if (flexReq != null) {
+            return flexReq.getParameterMap();
+        }
+        return req.getParameterMap();
     }
 
     /**
@@ -791,15 +879,15 @@ public final class CmsRequestUtil {
     /**
      * Parses a request of the form <code>multipart/form-data</code>.
      *
-     * The result list will contain items of type <code>{@link FileItem}</code>.
+     * The result list will contain items of type <code>{@link DiskFileItem}</code>.
      * If the request is not of type <code>multipart/form-data</code>, then <code>null</code> is returned.<p>
      *
      * @param request the HTTP servlet request to parse
      *
-     * @return the list of <code>{@link FileItem}</code> extracted from the multipart request,
+     * @return the list of <code>{@link DiskFileItem}</code> extracted from the multipart request,
      *      or <code>null</code> if the request was not of type <code>multipart/form-data</code>
      */
-    public static List<FileItem> readMultipartFileItems(HttpServletRequest request) {
+    public static List<DiskFileItem> readMultipartFileItems(HttpServletRequest request) {
 
         return readMultipartFileItems(request, OpenCms.getSystemInfo().getPackagesRfsPath());
     }
@@ -807,31 +895,29 @@ public final class CmsRequestUtil {
     /**
      * Parses a request of the form <code>multipart/form-data</code>.
      *
-     * The result list will contain items of type <code>{@link FileItem}</code>.
+     * The result list will contain items of type <code>{@link DiskFileItem}</code>.
      * If the request is not of type <code>multipart/form-data</code>, then <code>null</code> is returned.<p>
      *
      * @param request the HTTP servlet request to parse
      * @param tempFolderPath the real file system path to the temp file folder
      *
-     * @return the list of <code>{@link FileItem}</code> extracted from the multipart request,
+     * @return the list of <code>{@link DiskFileItem}</code> extracted from the multipart request,
      *      or <code>null</code> if the request was not of type <code>multipart/form-data</code>
      */
-    public static List<FileItem> readMultipartFileItems(HttpServletRequest request, String tempFolderPath) {
+    public static List<DiskFileItem> readMultipartFileItems(HttpServletRequest request, String tempFolderPath) {
 
-        if (!ServletFileUpload.isMultipartContent(request)) {
+        if (!JakartaServletFileUpload.isMultipartContent(request)) {
             return null;
         }
-        DiskFileItemFactory factory = new DiskFileItemFactory();
-        // maximum size that will be stored in memory
-        factory.setSizeThreshold(4096);
-        // the location for saving data that is larger than getSizeThreshold()
-        factory.setRepository(new File(tempFolderPath));
-        ServletFileUpload fu = new ServletFileUpload(factory);
+        DiskFileItemFactory.Builder builder = DiskFileItemFactory.builder();
+        builder.setPath(tempFolderPath);
+        DiskFileItemFactory factory = builder.get();
+        JakartaServletDiskFileUpload fu = new JakartaServletDiskFileUpload(factory);
         // set encoding to correctly handle special chars (e.g. in filenames)
-        fu.setHeaderEncoding(request.getCharacterEncoding());
-        List<FileItem> result = new ArrayList<FileItem>();
+        fu.setHeaderCharset(Charset.forName(request.getCharacterEncoding()));
+        List<DiskFileItem> result = new ArrayList<DiskFileItem>();
         try {
-            List<FileItem> items = CmsCollectionsGenericWrapper.list(fu.parseRequest(request));
+            List<DiskFileItem> items = CmsCollectionsGenericWrapper.list(fu.parseRequest(request));
             if (items != null) {
                 result = items;
             }
@@ -854,21 +940,26 @@ public final class CmsRequestUtil {
      */
     public static Map<String, String[]> readParameterMapFromMultiPart(
         String encoding,
-        List<FileItem> multiPartFileItems) {
+        List<DiskFileItem> multiPartFileItems) {
 
         Map<String, String[]> parameterMap = new HashMap<String, String[]>();
-        Iterator<FileItem> i = multiPartFileItems.iterator();
+        Iterator<DiskFileItem> i = multiPartFileItems.iterator();
         while (i.hasNext()) {
-            FileItem item = i.next();
+            DiskFileItem item = i.next();
             String name = item.getFieldName();
             String value = null;
             if ((name != null) && (item.getName() == null)) {
-                // only put to map if current item is no file and not null
                 try {
-                    value = item.getString(encoding);
-                } catch (UnsupportedEncodingException e) {
-                    LOG.error(Messages.get().getBundle().key(Messages.LOG_ENC_MULTIPART_REQ_ERROR_0), e);
-                    value = item.getString();
+                    // only put to map if current item is no file and not null
+                    try {
+                        value = item.getString(Charset.forName(encoding));
+                    } catch (UnsupportedEncodingException e) {
+                        LOG.error(Messages.get().getBundle().key(Messages.LOG_ENC_MULTIPART_REQ_ERROR_0), e);
+                        value = item.getString();
+                    }
+                } catch (IOException e) {
+                    LOG.error(e.getLocalizedMessage(), e);
+                    continue;
                 }
                 if (parameterMap.containsKey(name)) {
 
@@ -901,8 +992,9 @@ public final class CmsRequestUtil {
         jsp.getResponse().setHeader(HEADER_CONNECTION, "close");
         try {
             HttpServletResponse response = jsp.getResponse();
-            if (response instanceof CmsFlexResponse) {
-                ((CmsFlexResponse)jsp.getResponse()).sendRedirect(target, true);
+            CmsFlexResponse flexRes = CmsRequestUtil.getFlexResponse(response);
+            if (flexRes != null) {
+                flexRes.sendRedirect(target, true);
             } else {
                 response.setHeader("Location", target);
                 response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
@@ -915,7 +1007,7 @@ public final class CmsRequestUtil {
     /**
      * Redirects the response to the target link.<p>
      *
-     * Use this method instead of {@link javax.servlet.http.HttpServletResponse#sendRedirect(java.lang.String)}
+     * Use this method instead of {@link jakarta.servlet.http.HttpServletResponse#sendRedirect(java.lang.String)}
      * to avoid relative links with secure sites (and issues with apache).<p>
      *
      * @param jsp the OpenCms JSP context

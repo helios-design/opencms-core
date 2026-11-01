@@ -41,11 +41,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * This is a widget to be used in a dialog which should show a progress bar based
@@ -246,9 +246,10 @@ public class CmsProgressWidget {
                 if (LOG.isErrorEnabled()) {
                     LOG.error(Messages.get().getBundle().key(Messages.LOG_PROGRESS_THREAD_NOT_FOUND_1, getKey()));
                 }
-                return createError(Messages.get().getBundle(getJsp().getRequestContext().getLocale()).key(
-                    Messages.GUI_PROGRESS_THREAD_NOT_FOUND_1,
-                    getKey()));
+                return createError(
+                    Messages.get().getBundle(getJsp().getRequestContext().getLocale()).key(
+                        Messages.GUI_PROGRESS_THREAD_NOT_FOUND_1,
+                        getKey()));
             }
 
         } catch (Throwable t) {

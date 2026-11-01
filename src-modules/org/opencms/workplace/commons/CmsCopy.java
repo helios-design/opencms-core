@@ -48,12 +48,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides methods for the copy resources dialog.<p>
@@ -200,9 +200,10 @@ public class CmsCopy extends CmsMultiDialog {
                 if (resource.getTypeId() == targetType) {
                     // file type of target is the same as source, show confirmation dialog
                     setParamMessage(
-                        CmsStringUtil.escapeHtml(key(
-                            Messages.GUI_COPY_CONFIRM_OVERWRITE_2,
-                            new Object[] {getParamResource(), getParamTarget()})));
+                        CmsStringUtil.escapeHtml(
+                            key(
+                                Messages.GUI_COPY_CONFIRM_OVERWRITE_2,
+                                new Object[] {getParamResource(), getParamTarget()})));
                     getJsp().include(FILE_DIALOG_SCREEN_CONFIRM);
                 } else {
                     // file type is different, create error message
@@ -385,7 +386,7 @@ public class CmsCopy extends CmsMultiDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {
@@ -513,7 +514,8 @@ public class CmsCopy extends CmsMultiDialog {
         String target,
         String sitePrefix,
         CmsResourceCopyMode copyMode,
-        boolean overwrite) throws CmsException {
+        boolean overwrite)
+    throws CmsException {
 
         // calculate the target name
         String finalTarget = CmsLinkManager.getAbsoluteUri(target, CmsResource.getParentFolder(source));

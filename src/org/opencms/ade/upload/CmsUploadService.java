@@ -30,19 +30,23 @@ package org.opencms.ade.upload;
 import org.opencms.file.CmsObject;
 import org.opencms.file.CmsResource;
 import org.opencms.file.CmsResourceFilter;
+import org.opencms.file.quota.CmsQuotaManager;
 import org.opencms.gwt.CmsGwtService;
+import org.opencms.gwt.shared.CmsQuotaStatus;
 import org.opencms.gwt.shared.CmsUploadFileBean;
 import org.opencms.gwt.shared.CmsUploadProgessInfo;
 import org.opencms.gwt.shared.CmsUploadProgessInfo.UPLOAD_STATE;
 import org.opencms.gwt.shared.rpc.I_CmsUploadService;
 import org.opencms.main.CmsException;
+import org.opencms.main.OpenCms;
+import org.opencms.security.CmsPermissionSet;
 import org.opencms.util.CmsUUID;
 
+import java.nio.file.InvalidPathException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.fileupload.InvalidFileNameException;
-import org.apache.commons.fileupload.util.Streams;
+import org.apache.commons.fileupload2.core.DiskFileItem;
 
 /**
  * Handles all RPC services related to the upload dialog.<p>
@@ -93,7 +97,7 @@ public class CmsUploadService extends CmsGwtService implements I_CmsUploadServic
             for (String fileName : fileNames) {
 
                 try {
-                    Streams.checkFileName(fileName);
+                    DiskFileItem.checkFileName(fileName);
                     String newResName = CmsUploadBean.getNewResourceName(getCmsObject(), fileName, targetFolder, false);
                     if (existsResource(newResName, isRootPath)) {
                         if (isDeletedResource(newResName, isRootPath)) {
@@ -102,7 +106,7 @@ public class CmsUploadService extends CmsGwtService implements I_CmsUploadServic
                             existingResourceNames.add(fileName);
                         }
                     }
-                } catch (InvalidFileNameException e) {
+                } catch (InvalidPathException e) {
                     invalidFileNames.add(fileName);
                 }
             }
@@ -110,6 +114,36 @@ public class CmsUploadService extends CmsGwtService implements I_CmsUploadServic
             isActive = true;
         }
         return new CmsUploadFileBean(existingResourceNames, invalidFileNames, existingDeleted, isActive);
+    }
+
+    /**
+     * @see org.opencms.gwt.shared.rpc.I_CmsUploadService#getQuota(String, boolean)
+     */
+    public CmsQuotaStatus getQuota(String targetFolder, boolean isRootPath) {
+
+        if ((targetFolder == null) || getCmsObject().getRequestContext().getCurrentProject().isOnlineProject()) {
+            return null;
+        }
+        try {
+            // Check the target folder with the caller's permissions before reading the quota snapshot.
+            CmsObject cms = OpenCms.initCmsObject(getCmsObject());
+            if (isRootPath) {
+                cms.getRequestContext().setSiteRoot("");
+            }
+            CmsResource folder = cms.readResource(targetFolder, CmsResourceFilter.IGNORE_EXPIRATION);
+            if (!folder.isFolder()
+                || !cms.hasPermissions(
+                    folder,
+                    CmsPermissionSet.ACCESS_WRITE,
+                    false,
+                    CmsResourceFilter.IGNORE_EXPIRATION)) {
+                return null;
+            }
+            return CmsQuotaManager.get().getStatus(folder.getRootPath());
+        } catch (CmsException e) {
+            // An unavailable warning must not interrupt the existing upload workflow.
+            return null;
+        }
     }
 
     /**

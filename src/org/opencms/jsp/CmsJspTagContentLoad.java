@@ -48,9 +48,9 @@ import org.opencms.xml.content.CmsXmlContentFactory;
 import java.util.Iterator;
 import java.util.Locale;
 
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-import javax.servlet.jsp.tagext.Tag;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
+import jakarta.servlet.jsp.tagext.Tag;
 
 /**
  * Implementation of the <code>&lt;cms:contentload/&gt;</code> tag,
@@ -133,7 +133,7 @@ public class CmsJspTagContentLoad extends CmsJspTagResourceLoad implements I_Cms
         String collectorParam,
         Locale locale,
         boolean editable)
-        throws JspException {
+    throws JspException {
 
         this(container, context, collectorName, collectorParam, null, null, locale, editable);
     }
@@ -161,7 +161,7 @@ public class CmsJspTagContentLoad extends CmsJspTagResourceLoad implements I_Cms
         String pageSize,
         Locale locale,
         boolean editable)
-        throws JspException {
+    throws JspException {
 
         this(
             container,
@@ -197,7 +197,7 @@ public class CmsJspTagContentLoad extends CmsJspTagResourceLoad implements I_Cms
         String pageSize,
         Locale locale,
         CmsDirectEditMode editMode)
-        throws JspException {
+    throws JspException {
 
         setCollector(collectorName);
         setParam(collectorParam);
@@ -213,7 +213,7 @@ public class CmsJspTagContentLoad extends CmsJspTagResourceLoad implements I_Cms
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() throws JspException, CmsIllegalArgumentException {
@@ -388,7 +388,7 @@ public class CmsJspTagContentLoad extends CmsJspTagResourceLoad implements I_Cms
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#release()
+     * @see jakarta.servlet.jsp.tagext.Tag#release()
      */
     @Override
     public void release() {

@@ -1,4 +1,7 @@
+import groovy.xml.XmlParser
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.api.logging.LogLevel
+import org.gradle.api.plugins.JavaBasePlugin
 
 plugins {
     id 'java-library'
@@ -6,12 +9,25 @@ plugins {
     id 'signing'
     id 'eclipse'
     id 'io.github.gradle-nexus.publish-plugin' version '2.0.0'
-    id 'com.liferay.tlddoc.builder' version '2.0.1'
+    id 'org.openrewrite.rewrite' version '7.39.0'
+    id("com.netflix.nebula.jakartaee-migration") version "2.0.2"
+    id 'com.diffplug.spotless' version '8.5.1'
 }
+
+def pVariant = providers.gradleProperty("opencms_variant").orElse("").map(variant -> variant ? "-$variant" : "")
+
 
 group = "org.opencms"
 
-layout.buildDirectory.set(file(build_directory))
+def configuredBuildDirectory = providers.gradleProperty('opencms_build_directory')
+    .orElse(providers.environmentVariable('OPENCMS_BUILD_DIR'))
+    .orElse(providers.gradleProperty('build_directory'))
+    .get()
+def eeTarget = providers.gradleProperty("eeTarget").get()
+
+
+
+layout.buildDirectory.set(file(configuredBuildDirectory))
 
 java {
     sourceCompatibility = JavaVersion.toVersion(java_target_version)
@@ -30,18 +46,37 @@ nexusPublishing {
     }
 }
 
+rewrite {
+	
+    configFile = file("assets/openrewrite/rewrite.yml")
+    exportDatatables = true
+    exclusion("src-gwt/**")
+    exclusion("modules/**")
+
+}
+
+if (eeTarget == "jakarta") { 
+    jakartaeeMigration {
+        includeTransform('com.vaadin:vaadin-compatibility-server')
+        includeTransform('com.vaadin:vaadin-server')
+        configurations.all { config ->
+            transform(config)
+        }
+    }
+}
+
 
 
 // use the same properties file as the OpenCms core does for the version information
 // please note that in a Jenkins CI build, this properties file should be dynamically generated
-def externalVersionProps = layout.buildDirectory.file("../version.properties").get().asFile
+def externalVersionProps = [layout.buildDirectory.file("version.properties").get().asFile, layout.buildDirectory.file("../version.properties").get().asFile].find { it.exists() } ?: layout.buildDirectory.file("../version.properties").get().asFile
 def propFile;
 if (externalVersionProps.exists()){
-    println "Using external version properties file: $externalVersionProps"
+    logger.lifecycle("Using external version properties file: $externalVersionProps")
     propFile=externalVersionProps
 }else{
-    println 'Using internal version properties file'
-    propFile=file("$projectDir/src/org/opencms/main/version.properties")
+    logger.lifecycle('Using internal version properties file')
+    propFile=file("${projectDir}/src/org/opencms/main/version.properties")
 }
 
 Properties vprops = new Properties()
@@ -54,6 +89,10 @@ if (opencms_version) {
 
 // flag, indicating if javadoc should be skipped
 boolean addJavadoc = !(project.hasProperty('skip_javadoc') && skip_javadoc.toBoolean())
+def tomcatUpdateTarget = project.findProperty('tomcat_update_target')
+def hasTomcatUpdateTarget = tomcatUpdateTarget && file(tomcatUpdateTarget).exists()
+def moduleCopyTarget = project.findProperty('module_copy_target')
+def hasModuleCopyTarget = moduleCopyTarget && file(moduleCopyTarget).exists()
 
 // alternative variable name for the case where the version variable is used for something else, e.g. javadoc
 ext.ocmsVersion = vprops['version.number']
@@ -62,16 +101,16 @@ ext.ocmsVersion = vprops['version.number']
 def extModulesProject = findProject(':extmodules')
 def hasExtModules = null != extModulesProject
 if (hasExtModules) {
-    println 'Adding coreproject property to subprojects.'
+    logger.lifecycle('Adding coreproject property to subprojects.')
     subprojects {
         ext.coreproject = ':'
     }
 }
 
 repositories {
-    if (project.hasProperty('additional_repositories')){
-        additional_repositories.split(';').each{ repo ->
-            maven { url = repo }
+    if (project.hasProperty('additional_repositories') && additional_repositories?.trim()){
+        additional_repositories.split(';').findAll { it.trim() }.each { repo ->
+            maven { url = uri(repo) }
         }
     }
     mavenCentral()
@@ -81,6 +120,11 @@ repositories {
     maven {
         url = 'https://maven.vaadin.com/vaadin-addons'
     }
+    maven {
+        url = 'https://logicaldoc.sourceforge.net/maven/'
+    }
+    
+    
 }
 
 if (!project.hasProperty('max_heap_size')){
@@ -114,11 +158,19 @@ sourceSets{
         java.srcDirs=['src-setup']
         resources.srcDirs=['src-setup']
     }
+    tools {
+        java.srcDirs=['assets/storage/src']
+        resources.srcDirs=['assets/storage/src']
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += output + compileClasspath
+    }
     test {
         java {
             srcDirs=['test']
             exclude 'data/**'
         }
+        compileClasspath += sourceSets.tools.output
+        runtimeClasspath += sourceSets.tools.output
         resources {
             srcDirs=['test']
             exclude 'data/**'
@@ -136,7 +188,462 @@ sourceSets{
     }
 }
 
+def spotlessImportOrder = ['com.alkacon', 'de.alkacon', 'org.opencms', 'com.opencms', 'java', 'javax', 'org.apache', 'org', 'com']
+def spotlessFormatterConfigXml = '''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<profiles version="23">
+<profile kind="CodeFormatterProfile" name="OpenCms Coding Rules" version="23">
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_ellipsis" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_enum_declarations" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_allocation_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_for_statment" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.new_lines_at_block_boundaries" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_constructor_declaration_parameters" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.insert_new_line_for_parameter" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_package" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_empty_parens_in_enum_constant" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_while" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_empty_parens_in_annotation_type_member_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.format_javadoc_comments" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.indentation.size" value="4"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_enum_constant_declaration" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_semicolon_in_for" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.align_with_spaces" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.continuation_indentation" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.number_of_blank_lines_before_code_block" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_switch_case_expressions" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_after_package" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_multiple_local_declarations" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_enum_constant" value="16"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_angle_bracket_in_parameterized_type_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.indent_root_tags" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_or_operator_multicatch" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.enabling_tag" value="@formatter:on"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.count_line_length_from_starting_position" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_record_components" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_throws_clause_in_method_declaration" value="32"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_parameter" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_multiplicative_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_then_statement_on_same_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_explicitconstructorcall_arguments" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_prefix_operator" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_brace_in_array_initializer" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_angle_bracket_in_type_arguments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_method" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_parameterized_type_references" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_logical_operator" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_parenthesized_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_annotation_declaration_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_record_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_enum_constant" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_multiplicative_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_and_in_type_parameter" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_empty_parens_in_method_invocation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_assignment_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_type_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_for" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.preserve_white_space_between_code_and_line_comments" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_local_variable" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_abstract_method" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_enum_constant_declaration_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.align_variable_declarations_on_columns" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_method_invocation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_union_type_in_multicatch" value="16"/>
+<setting id="org.eclipse.jdt.core.formatter.number_of_blank_lines_at_beginning_of_method_body" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_else_statement_on_same_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_catch_clause" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_parameterized_type_reference" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_array_initializer" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_annotation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_explicit_constructor_call" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_multiplicative_operator" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_anonymous_type_declaration_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_switch_case_expressions" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_shift_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_body_declarations_compare_to_annotation_declaration_header" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_block" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.number_of_blank_lines_at_end_of_code_block" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_bitwise_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.put_empty_statement_on_new_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_parameters_in_constructor_declaration" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_type_parameters" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_compact_loops" value="16"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.clear_blank_lines_in_block_comment" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_simple_for_body_on_same_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_at_end_of_file_if_missing" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_switch_case_arrow_operator" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_array_initializer" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_unary_operator" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.format_line_comment_starting_on_first_column" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_annotation" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_ellipsis" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_semicolon_in_try_resources" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_colon_in_assert" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_annotations_on_enum_constant" value="49"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_and_in_type_parameter" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_parenthesized_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.text_block_indentation" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.align_type_members_on_columns" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_assignment" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_module_statements" value="16"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_body_declarations_compare_to_type_header" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_empty_parens_in_method_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.align_tags_names_descriptions" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_enum_constant" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_if_then_body_block_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_first_class_body_declaration" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_before_closing_brace_in_array_initializer" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_constructor_declaration_parameters" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.format_guardian_clause_on_one_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_if" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.align_assignment_statements_on_columns" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_permitted_types" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_block_in_case" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_constructor_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_conditional_expression_chain" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.format_header" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_type_annotations" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_allocation_expression" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_assertion_message_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_switch" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_method_declaration" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.align_fields_grouping_blank_lines" value="2147483647"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.new_lines_at_javadoc_boundaries" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_bitwise_operator" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_annotation_type_declaration" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_colon_in_for" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_resources_in_try" value="80"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_selector_in_method_invocation" value="4"/>
+<setting id="org.eclipse.jdt.core.formatter.never_indent_block_comments_on_first_column" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_synchronized" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_allocation_expression" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.format_source_code" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_array_initializer" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_field" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_at_in_annotation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_method" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_superclass_in_type_declaration" value="32"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_parenthesized_expression_in_throw" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_not_operator" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_type_annotation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_brace_in_array_initializer" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_parenthesized_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.format_html" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_at_in_annotation_type_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_method_delcaration" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_compact_if" value="16"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_empty_lines" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_type_arguments" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_unary_operator" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_enum_constant" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_annotation" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_enum_declarations" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_annotations_on_package" value="49"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_switchstatements_compare_to_switch" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_before_else_in_if_statement" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_assignment_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_label" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_body_declarations_compare_to_enum_declaration_header" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_colon_in_conditional" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_method_declaration_parameters" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_cast" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_arrow_in_switch_case" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_before_while_in_do_statement" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_bracket_in_array_type_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_permitted_types_in_type_declaration" value="32"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_body_declarations_compare_to_record_header" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_angle_bracket_in_parameterized_type_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_opening_brace_in_array_initializer" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_breaks_compare_to_cases" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_method_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_bitwise_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.javadoc_do_not_separate_block_tags" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_try" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_lambda_arrow" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_method_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.indent_tag_description" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_imple_if_on_one_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_record_constructor" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_enum_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_brackets_in_array_type_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_angle_bracket_in_type_parameters" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_string_concatenation" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_semicolon_in_for" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_bracket_in_array_allocation_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_multiple_fields" value="16"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_enum_constant_arguments" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_prefix_operator" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_array_initializer" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_shift_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_method_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_type_parameters" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_catch" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_shift_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_empty_braces_in_array_initializer" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_multiple_local_declarations" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_simple_do_while_body_on_same_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_annotation_type_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_record_components" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_outer_expressions_when_nested" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_closing_paren_in_cast" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_synchronized" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_annotation_type_member_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_expressions_in_for_loop_header" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_additive_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_simple_getter_setter_on_one_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_while" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_block_in_case_after_arrow" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_angle_bracket_in_type_parameters" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_string_concatenation" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_lambda_arrow" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.join_lines_in_comments" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_record_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_relational_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_multiple_field_declarations" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_between_import_groups" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_at_in_annotation_type_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_logical_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_method_invocation" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_after_imports" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.insert_new_line_before_root_tags" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_record_declaration" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_method_declaration_throws" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_switch_statement" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_postfix_operator" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_for_increments" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_type_arguments" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_arrow_in_switch_default" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_for_inits" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.disabling_tag" value="@formatter:off"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_enum_constants" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_imports" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.number_of_blank_lines_at_end_of_method_body" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_if_while_statement" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.format_markdown_comments" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_closing_brace_in_block" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_parenthesized_expression_in_return" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_arrow_in_switch_case" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_field" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_between_type_declarations" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_switch_body_block_on_one_line" value="one_line_never"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_for" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_catch" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_switch" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_anonymous_type_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.never_indent_line_comments_on_first_column" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_for_inits" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_statements_compare_to_block" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_anonymous_type_declaration" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_question_in_wildcard" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_annotation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_method_invocation_arguments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_expressions_in_switch_case_with_arrow" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_switch" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.align_tags_descriptions_grouped" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.line_length" value="100"/>
+<setting id="org.eclipse.jdt.core.formatter.use_on_off_tags" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_method_body_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_empty_brackets_in_array_allocation_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_loop_body_block_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_enum_constant" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_method_declaration" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_colon_in_for" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_type_declaration_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_closing_angle_bracket_in_type_arguments" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_additive_operator" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_multiple_field_declarations" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_record_constructor" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_relational_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_superinterfaces" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_record_declaration_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_colon_in_default" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_question_in_conditional" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_constructor_declaration" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_lambda_body" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.compact_else_if" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_type_parameters" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_catch" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_method_invocation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_method_invocation_arguments" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_method_invocation" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_throws_clause_in_constructor_declaration" value="33"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_before_catch_in_try_statement" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_try" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_annotations_on_parameter" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.clear_blank_lines_in_javadoc_comment" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_relational_operator" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_expressions_in_array_initializer" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.number_of_empty_lines_to_preserve" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.align_arrows_in_switch_on_columns" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_colon_in_case" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_additive_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_if" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_type_arguments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_string_concatenation" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.format_line_comments" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.align_selector_in_method_invocation_on_expression_first_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_record_declaration" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_colon_in_labeled_statement" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_switch_case_with_arrow_on_one_line" value="one_line_never"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_expressions_in_switch_case_with_colon" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.number_of_blank_lines_after_code_block" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_type_declaration" value="32"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_conditional_expression" value="48"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_type" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_annotations_on_type" value="49"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_block" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_annotations_on_local_variable" value="49"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_enum_declaration" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_arrow_in_switch_default" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.insert_new_line_between_different_tags" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_additive_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_method_invocation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_while" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.join_wrapped_lines" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_between_empty_parens_in_constructor_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_annotations_on_field" value="49"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_conditional_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_switchstatements_compare_to_cases" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_bracket_in_array_allocation_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.join_line_comments" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_synchronized" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_shift_operator" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.use_tabs_only_for_leading_indentations" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_try_clause" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_code_block_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_constructor_declaration_throws" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_record_components" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.tabulation.size" value="4"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_bitwise_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_bracket_in_array_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_colon_in_conditional" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_try" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_semicolon_in_try_resources" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.continuation_indentation_for_array_initializer" value="2"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_question_in_wildcard" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_record_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_enum_declaration" value="16"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_assignment_operator" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_colon_in_labeled_statement" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_switch" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_superinterfaces" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_method_declaration_parameters" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_closing_angle_bracket_in_type_parameters" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_switch_case_with_arrow" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_lambda_body_block_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_annotations_on_method" value="49"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_parameterized_type_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_record_constructor_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_record_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_empty_array_initializer_on_one_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_assertion_message" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_constructor_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_new_chunk" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_bracket_in_array_allocation_expression" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_constructor_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_angle_bracket_in_parameterized_type_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_angle_bracket_in_type_arguments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_colon_in_assert" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_member_type" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_logical_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_qualified_allocation_expression" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_record_declaration" value="32"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_if" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_semicolon" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_relational_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_postfix_operator" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_angle_bracket_in_type_arguments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_cast" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.format_block_comments" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.alignment_for_parameters_in_method_declaration" value="52"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_method_declaration_throws" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_after_last_class_body_declaration" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_statements_compare_to_body" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_simple_while_body_on_same_line" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_logical_operator" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_between_statement_group_in_switch" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_bracket_in_array_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_annotation" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_enum_constant_arguments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.parentheses_positions_in_lambda_declaration" value="common_lines"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_colon_in_case" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_comma_in_permitted_types" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_bracket_in_array_reference" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.keep_enum_declaration_on_one_line" value="one_line_if_empty"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_method_declaration" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_enum_constant" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.brace_position_for_type_declaration" value="end_of_line"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_multiplicative_operator" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.blank_lines_before_package" value="1"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_for" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_for_increments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_enum_constant" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_explicitconstructorcall_arguments" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_annotation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.indent_body_declarations_compare_to_enum_constant_header" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_constructor_declaration" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_constructor_declaration_throws" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_angle_bracket_in_type_parameters" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_question_in_conditional" value="insert"/>
+<setting id="org.eclipse.jdt.core.formatter.comment.indent_parameter_description" value="false"/>
+<setting id="org.eclipse.jdt.core.formatter.number_of_blank_lines_at_beginning_of_code_block" value="0"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_new_line_before_finally_in_try_statement" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.tabulation.char" value="space"/>
+<setting id="org.eclipse.jdt.core.formatter.wrap_before_string_concatenation" value="true"/>
+<setting id="org.eclipse.jdt.core.formatter.lineSplit" value="120"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_annotation" value="do not insert"/>
+<setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_switch" value="insert"/>
+</profile>
+</profiles>
+'''
+def spotlessEclipseVersion = '4.39'
+def hasSpotlessFilesProperty = project.hasProperty('spotlessFiles')
+def spotlessFilePaths = hasSpotlessFilesProperty
+    ? spotlessFiles.split(',').collect { it.trim() }.findAll { it }
+    : []
+def selectedSpotlessJavaTargets = []
+spotlessFilePaths.each { path ->
+    def targetFile = file(path)
+    if (!targetFile.exists()) {
+        throw new GradleException("spotlessFiles entry does not exist: $path")
+    }
+    selectedSpotlessJavaTargets.add(targetFile.isDirectory() ? fileTree(dir: targetFile, include: '**/*.java') : targetFile)
+}
+def spotlessJavaTargets = hasSpotlessFilesProperty
+    ? files(selectedSpotlessJavaTargets)
+    : files(
+        sourceSets.main.allJava,
+        sourceSets.modules.allJava,
+        sourceSets.gwt.allJava,
+        sourceSets.setup.allJava,
+        sourceSets.tools.allJava,
+        sourceSets.test.allJava,
+        sourceSets.testGwt.allJava)
+
+spotless {
+    java {
+        target spotlessJavaTargets
+
+        importOrder spotlessImportOrder as String[]
+        expandWildcardImports()
+        removeUnusedImports()
+        eclipse(spotlessEclipseVersion)
+            .configXml(spotlessFormatterConfigXml)
+            .sortMembersEnabled(true)
+            .sortMembersOrder("T,SF,F,C,SI,I,SM,M")
+            .sortMembersDoNotSortFields(true)
+            .sortMembersVisibilityOrderEnabled(true)
+            .sortMembersVisibilityOrder("B,R,D,V")
+        formatAnnotations()
+        trimTrailingWhitespace()
+        leadingTabsToSpaces(4)
+    }
+}
+
 configurations {
+
+    gwtCodeServer {
+        description = 'GWT Super Dev Mode code server runtime; excluded from published GWT API dependencies'
+    }
 
     distribution {
         description = 'libraries included into the opencms distribution'
@@ -185,6 +692,15 @@ configurations {
     testImplementation {
         extendsFrom testCompile
         extendsFrom setupImplementation
+    }
+
+    toolsCompile {
+        description = 'used to compile standalone OpenCms command line tools'
+        extendsFrom compile
+    }
+
+    toolsImplementation {
+        extendsFrom toolsCompile
     }
 
     gwtCompile {
@@ -238,10 +754,16 @@ configurations {
     setupImplementation {
         extendsFrom setupCompile
     }
+
+    tlddocTool {
+        description = 'Configures Tag Library Documentation Generator for this project.'
+        visible = false
+    }
 }
 
 // import dependencies
 apply from: 'dependencies.gradle'
+apply from: "dependencies_${eeTarget}.gradle"
 if (project.hasProperty('external_directories')){
     dependencies{
         moduleDeps fileTree(dir: external_directories).matching { include '**/lib/*.jar' }
@@ -263,12 +785,12 @@ eclipse.classpath.file {
     }
 }
 
-eclipse.classpath.plusConfigurations = configurations.findAll { it.name.endsWith('Compile') }
+eclipse.classpath.plusConfigurations = configurations.matching { it.name.endsWith('Compile') }
 
 eclipse.classpath.downloadSources=true
 
 wrapper {
-    gradleVersion = '7.5.1'
+    gradleVersion = '9.4.1'
 }
 
 tasks.register('copyDeps', Copy) {
@@ -286,8 +808,15 @@ jar {
     manifest {
         attributes 'Implementation-Title': 'Alkacon OpenCms',
         'Implementation-Version': archiveVersion,
-        'Build-Time': new java.util.Date().format("yyyy-MM-dd HH:mm:ss"),
         'OpenCms-Localization': 'en'
+    }
+    // Set Build-Time at execution time, not configuration time, so the timestamp
+    // is not part of the task input snapshot. Gradle snapshots inputs before the
+    // task actions run, so an up-to-date jar keeps its previous Build-Time and is
+    // not rebuilt on every invocation; the stamp only changes when the jar is
+    // actually (re)built because sources or resources changed.
+    doFirst {
+        manifest.attributes('Build-Time': new java.util.Date().format("yyyy-MM-dd HH:mm:ss"))
     }
     archiveBaseName = 'opencms-core'
     archiveFileName = 'opencms.jar'
@@ -303,7 +832,7 @@ jar {
 
     if (externalVersionProps.exists()){
         exclude 'org/opencms/main/version.properties'
-        from (layout.buildDirectory.dir("..")){
+        from (externalVersionProps.parentFile){
             include 'version.properties'
             into 'org/opencms/main'
         }
@@ -314,10 +843,10 @@ jar {
     }
 
     doLast {
-        if (project.hasProperty('tomcat_update_target') && file(tomcat_update_target).exists()){
-            println "copying ${layout.buildDirectory.dir("libs").get().file(archiveName).asFile} to ${tomcat_update_target}"
+        if (hasTomcatUpdateTarget) {
+            logger.lifecycle("copying ${archiveFile.get().asFile} to ${tomcat_update_target}")
             copy {
-                from  layout.buildDirectory.dir("libs").get().file(archiveName).asFile
+                from archiveFile
                 into tomcat_update_target
             }
         }
@@ -329,7 +858,7 @@ javadoc {
     classpath += sourceSets.gwt.compileClasspath
     doLast {
         copy {
-            from  "${projectDir}/doc/javadoc/logos"
+            from  "${projectDir}/assets/javadoc/logos"
             into layout.buildDirectory.dir("docs/javadoc/logos")
         }
     }
@@ -369,6 +898,7 @@ tasks.register('gwtJar', Jar) {
     from (sourceSets.main.java.srcDirs){
         include '**/shared/**'
         include '**/gwt/CmsRpcException.java'
+        include '**/gwt/CmsRpcException_CustomFieldSerializer.java'
         include '**/ade/detailpage/CmsDetailPageInfo.java'
         include '**/db/CmsResourceState.java'
         include '**/jsp/CmsContainerJsonKeys.java'
@@ -395,7 +925,7 @@ tasks.register('javadocModules', Javadoc) {
     dependsOn jar
     doLast {
         copy {
-            from  "${projectDir}/doc/javadoc/logos"
+            from  "${projectDir}/assets/javadoc/logos"
             into layout.buildDirectory.dir("docs/javadocModules/logos")
         }
     }
@@ -433,7 +963,7 @@ tasks.register('javadocGwt', Javadoc) {
     dependsOn jar
     doLast {
         copy {
-            from  "${projectDir}/doc/javadoc/logos"
+            from  "${projectDir}/assets/javadoc/logos"
             into layout.buildDirectory.dir("docs/javadocGwt/logos")
         }
     }
@@ -466,6 +996,7 @@ tasks.register('sourcesJarGwt', Jar) {
     from (sourceSets.main.java.srcDirs){
         include '**/shared/**'
         include '**/gwt/CmsRpcException.java'
+        include '**/gwt/CmsRpcException_CustomFieldSerializer.java'
         include '**/ade/detailpage/CmsDetailPageInfo.java'
         include '**/db/CmsResourceState.java'
         include '**/jsp/CmsContainerJsonKeys.java'
@@ -481,10 +1012,10 @@ tasks.register('sourcesJarGwt', Jar) {
 
 tasks.register('workplaceTheme', JavaExec) {
     doFirst {
-        println '======================================================'
-        println "Building workplace theme"
-        println "Generating ${layout.buildDirectory.dir("workplaceThemes/opencms/styles.css").get().asFile}"
-        println '======================================================'
+        logger.lifecycle('======================================================')
+        logger.lifecycle("Building workplace theme")
+        logger.lifecycle("Generating ${layout.buildDirectory.dir("workplaceThemes/opencms/styles.css").get().asFile}")
+        logger.lifecycle('======================================================')
         def dir = layout.buildDirectory.dir("workplaceThemes/opencms").get().asFile
         if (dir.exists()){
             delete(dir)
@@ -502,17 +1033,17 @@ tasks.register('workplaceTheme', JavaExec) {
 
 
     args = [
-        "$projectDir/webapp/workplaceThemes/VAADIN/themes/opencms/styles.scss",
+        "${projectDir}/webapp/workplaceThemes/VAADIN/themes/opencms/styles.scss",
         layout.buildDirectory.file("workplaceThemes/opencms/styles.css").get().asFile
     ]
     maxHeapSize = max_heap_size
 }
 tasks.register('opencmsFonts', JavaExec) {
     doFirst {
-        println '======================================================'
-        println "Building OpenCms fonts CSS"
-        println "Generating ${layout.buildDirectory.dir("workplaceThemes/opencmsFonts/opencmsFonts.css").get().asFile}"
-        println '======================================================'
+        logger.lifecycle('======================================================')
+        logger.lifecycle("Building OpenCms fonts CSS")
+        logger.lifecycle("Generating ${layout.buildDirectory.dir("workplaceThemes/opencmsFonts/opencmsFonts.css").get().asFile}")
+        logger.lifecycle('======================================================')
         def dir = layout.buildDirectory.dir("workplaceThemes/opencmsFonts").get().asFile
         if (dir.exists()){
             delete(dir)
@@ -531,7 +1062,7 @@ tasks.register('opencmsFonts', JavaExec) {
     // opencmsFonts are generated into a different directory than the /opencms/styles.css
     // to avoid conflicts or dependencies between the build tasks 'workplaceTheme' and 'opencmsFonts'
     args = [
-        "$projectDir/webapp/workplaceThemes/VAADIN/themes/opencms/opencmsFonts.scss",
+        "${projectDir}/webapp/workplaceThemes/VAADIN/themes/opencms/opencmsFonts.scss",
         layout.buildDirectory.file("workplaceThemes/opencmsFonts/opencmsFonts.css").get().asFile
     ]
     maxHeapSize = max_heap_size
@@ -539,15 +1070,52 @@ tasks.register('opencmsFonts', JavaExec) {
 
 
 Properties gwtProps = new Properties()
-gwtProps.load(new FileInputStream("$projectDir/src-gwt/gwt-modules.properties"))
+gwtProps.load(new FileInputStream("${projectDir}/src-gwt/gwt-modules.properties"))
 project.ext.gwtModuleNames = gwtProps['gwtmodules']
+
+// Run GWT Super Dev Mode against one of the project's modules.
+tasks.register('gwtSuperDev', JavaExec) {
+    group = 'GWT'
+    description = 'Starts the GWT Super Dev Mode code server (select module with -PgwtModule=...).'
+    dependsOn gwtClasses
+    mainClass = 'com.google.gwt.dev.codeserver.CodeServer'
+    classpath {
+        [
+            sourceSets.main.java.srcDirs,
+            sourceSets.gwt.java.srcDirs,
+            sourceSets.modules.java.srcDirs,
+            sourceSets.gwt.output.resourcesDir,
+            sourceSets.gwt.java.classesDirectory,
+            sourceSets.gwt.compileClasspath,
+            configurations.gwtCodeServer,
+        ]
+    }
+    doFirst {
+        def module = project.findProperty('gwtModule') ?: 'org.opencms.ade.OpenCms'
+        if (!gwtModuleNames.split(',').contains(module)) {
+            throw new GradleException("Unknown GWT module '${module}'. Available modules: ${gwtModuleNames}")
+        }
+        def workDir = layout.buildDirectory.dir("gwt-superdev-work/${module}").get().asFile
+        workDir.mkdirs()
+        args = [
+            '-port', project.findProperty('gwtPort') ?: '9876',
+            '-bindAddress', project.findProperty('gwtBindAddress') ?: '127.0.0.1',
+            '-workDir', workDir.absolutePath,
+            '-logLevel', 'INFO',
+            '-style', 'PRETTY',
+            '-setProperty', 'locale=en',
+            module
+        ]
+    }
+    maxHeapSize = max_heap_size
+}
 
 tasks.register('resourcesJar', Jar) {
     dependsOn workplaceTheme, opencmsFonts
     doFirst {
-        println '======================================================'
-        println "Building Resources Jar"
-        println '======================================================'
+        logger.lifecycle('======================================================')
+        logger.lifecycle("Building Resources Jar")
+        logger.lifecycle('======================================================')
     }
     archiveBaseName = 'opencms-resources'
     archiveFileName = 'opencms-resources.jar'
@@ -581,10 +1149,10 @@ tasks.register('resourcesJar', Jar) {
     }
 
     doLast {
-        if (project.hasProperty('tomcat_update_target') && file(tomcat_update_target).exists()){
-            println "copying ${layout.buildDirectory.dir("libs").get().file(archiveName).asFile} to ${tomcat_update_target}"
+        if (hasTomcatUpdateTarget) {
+            logger.lifecycle("copying ${archiveFile.get().asFile} to ${tomcat_update_target}")
             copy {
-                from  layout.buildDirectory.dir("libs").get().file(archiveName).asFile
+                from archiveFile
                 into tomcat_update_target
             }
         }
@@ -605,9 +1173,9 @@ gwtModuleNames.split(',').each{ gwtModule ->
         outputs.upToDateSpec = new org.gradle.api.specs.AndSpec()
 
         doFirst {
-            println '======================================================'
-            println "Building GWT resources for ${gwtModule}"
-            println '======================================================'
+            logger.lifecycle('======================================================')
+            logger.lifecycle("Building GWT resources for ${gwtModule}")
+            logger.lifecycle('======================================================')
             // to clean the output directory, delete it first
             def dir = file(buildDir)
             if (dir.exists()){
@@ -637,7 +1205,7 @@ gwtModuleNames.split(',').each{ gwtModule ->
 
 
         if (project.hasProperty('gwtDraft')) {
-            println "Using GWT draft mode for module $gwtModule"
+            logger.lifecycle("Using GWT draft mode for module $gwtModule")
             args =
                     [
                         gwtModule,
@@ -698,6 +1266,64 @@ tasks.register('setupJar', Jar) {
     exclude '**/.gitignore'
 }
 
+tasks.register('storageMigrationJar', Jar) {
+    dependsOn jar, tasks.named('toolsClasses')
+    from sourceSets.tools.output
+    from sourceSets.main.output
+    from {
+        sourceSets.tools.runtimeClasspath.findAll {
+            it.isFile() && it.name.endsWith('.jar')
+        }.collect {
+            zipTree(it)
+        }
+    }
+    archiveFileName = 'opencms-storage-migration.jar'
+    archiveBaseName = 'opencms-storage-migration'
+    destinationDirectory = layout.buildDirectory.dir('tools/storage')
+    group = 'OpenCms core JARs'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude '**/.gitignore'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/*.SF'
+    manifest {
+        attributes(
+            'Main-Class': 'org.opencms.tools.storage.CmsStorageMigrationTool',
+            'Implementation-Title': 'OpenCms Storage Migration Tool',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+tasks.register('storageMaintenanceJar', Jar) {
+    dependsOn jar, tasks.named('toolsClasses')
+    from sourceSets.tools.output
+    from sourceSets.main.output
+    from {
+        sourceSets.tools.runtimeClasspath.findAll {
+            it.isFile() && it.name.endsWith('.jar')
+        }.collect {
+            zipTree(it)
+        }
+    }
+    archiveFileName = 'opencms-storage-maintenance.jar'
+    archiveBaseName = 'opencms-storage-maintenance'
+    destinationDirectory = layout.buildDirectory.dir('tools/storage')
+    group = 'OpenCms core JARs'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude '**/.gitignore'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/*.SF'
+    manifest {
+        attributes(
+            'Main-Class': 'org.opencms.tools.storage.CmsStorageMaintenanceTool',
+            'Implementation-Title': 'OpenCms Storage Maintenance Tool',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
 tasks.register('javadocSetup', Javadoc) {
     dependsOn jar
     source = sourceSets.setup.allJava
@@ -705,7 +1331,7 @@ tasks.register('javadocSetup', Javadoc) {
     destinationDir = layout.buildDirectory.dir("docs/javadocSetup").get().asFile
     doLast {
         copy {
-            from  "${projectDir}/doc/javadoc/logos"
+            from  "${projectDir}/assets/javadoc/logos"
             into layout.buildDirectory.dir("docs/javadocSetup/logos")
         }
     }
@@ -736,8 +1362,42 @@ tasks.register('sourcesJarSetup', Jar) {
     archiveBaseName = 'opencms-setup'
 }
 
-tlddoc {
-    source "${projectDir}/webapp/WEB-INF/opencms.tld"
+def tlddocSources = files("${projectDir}/webapp/WEB-INF/opencms.tld")
+
+tasks.register('validateTLD') {
+    description = 'Validates TLD files.'
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    inputs.files(tlddocSources)
+
+    doLast {
+        def parser = new XmlParser(false, true)
+
+        tlddocSources.files.each { file ->
+            parser.parse(file)
+        }
+    }
+}
+
+tasks.register('copyTLDDocResources', Copy) {
+    description = 'Copies tag library documentation resources.'
+    from('src/main/tlddoc')
+    into layout.buildDirectory.dir('docs/tlddoc')
+}
+
+tasks.register('tlddoc', JavaExec) {
+    dependsOn 'copyTLDDocResources', 'validateTLD'
+    description = 'Generates tag library documentation.'
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    classpath = configurations.tlddocTool
+    mainClass = 'com.sun.tlddoc.TLDDoc'
+    maxHeapSize = '256m'
+    inputs.files(tlddocSources)
+    outputs.dir(layout.buildDirectory.dir('docs/tlddoc'))
+
+    doFirst {
+        args = ['-d', layout.buildDirectory.dir('docs/tlddoc').get().asFile.absolutePath] +
+            tlddocSources.files.collect { it.absolutePath }
+    }
 }
 
 
@@ -804,15 +1464,15 @@ allModuleNames.each{ moduleName ->
         archiveBaseName = moduleName
         group = 'OpenCms module ZIPs'
         doFirst {
-            println '======================================================'
-            println "Building ZIP for $moduleName version $moduleVersion"
-            println '======================================================'
+            logger.lifecycle('======================================================')
+            logger.lifecycle("Building ZIP for $moduleName version $moduleVersion")
+            logger.lifecycle('======================================================')
         }
         doLast {
-            if (project.hasProperty('module_copy_target') && file(module_copy_target).exists()){
-                println "copying ${layout.buildDirectory.dir("modulesZip").get().file(archiveName).asFile} to ${module_copy_target}"
+            if (hasModuleCopyTarget) {
+                logger.lifecycle("copying ${archiveFile.get().asFile} to ${module_copy_target}")
                 copy {
-                    from  layout.buildDirectory.dir("modulesZip").get().file(archiveName).asFile
+                    from archiveFile
                     into module_copy_target
                 }
             }
@@ -834,16 +1494,16 @@ allModuleNames.each{ moduleName ->
             group = 'OpenCms module JARs'
             exclude '**/.gitignore'
             doFirst{
-                println '======================================================'
-                println "Building ${moduleName}.jar including $modulePackages"
-                println '======================================================'
+                logger.lifecycle('======================================================')
+                logger.lifecycle("Building ${moduleName}.jar including $modulePackages")
+                logger.lifecycle('======================================================')
             }
 
             doLast {
-                if (project.hasProperty('tomcat_update_target') && file(tomcat_update_target).exists()){
-                    println "copying ${layout.buildDirectory.dir("libs").get().file(archiveName).asFile} to ${tomcat_update_target}"
+                if (hasTomcatUpdateTarget) {
+                    logger.lifecycle("copying ${archiveFile.get().asFile} to ${tomcat_update_target}")
                     copy {
-                        from  layout.buildDirectory.dir("libs").get().file(archiveName).asFile
+                        from archiveFile
                         into tomcat_update_target
                     }
                 }
@@ -858,9 +1518,9 @@ allModuleNames.each{ moduleName ->
 tasks.register('allModules') {
     dependsOn tasks.matching{ Task task -> task.name.startsWith('dist_')}
     doLast {
-        println '======================================================'
-        println 'Done building modules'
-        println '======================================================'
+        logger.lifecycle('======================================================')
+        logger.lifecycle('Done building modules')
+        logger.lifecycle('======================================================')
     }
 }
 
@@ -882,7 +1542,6 @@ tasks.register('war', Zip) {
         exclude '**/setupdata/**/*.jar'
         exclude '**/updatedata/**'
         exclude '**/workplaceThemes/**'
-        exclude '**/classes/META-INF/**'
         exclude '**/solr/**'
         exclude '**/spellcheck/**'
         exclude '**/*.html'
@@ -984,9 +1643,9 @@ tasks.register('updater', Zip) {
     ext.preserveLibModules = preserveLibModules
 
     // adds empty JAR files for all deprecated or updated libs
-    Properties buildProps = new Properties()
-    buildProps.load(new FileInputStream("${projectDir}/build-default.properties"))
-    buildProps['updater.jars.remove'].split(',').each{ jar ->
+    def jarListFile = file("assets/updater/updater-jars-remove_${eeTarget}.txt")
+    inputs.file(jarListFile)
+    jarListFile.readLines('UTF-8').collect { it.trim() }.findAll { it && !it.startsWith('#') }.each { jar ->
         from("${projectDir}/webapp/WEB-INF/updatedata/empty.jar"){
             into '/WEB-INF/lib'
             rename('empty\\.jar', jar)
@@ -1001,7 +1660,7 @@ tasks.register('updater', Zip) {
         include 'WEB-INF/updatedata/**/*.txt'
         include 'WEB-INF/updatedata/**/*.jsp'
         exclude 'WEB-INF/updatedata/config/opencms.xml'
-        exclude 'WEB-INF/updatedata/readme.txt'
+        exclude 'WEB-INF/updatedata/readme_*.txt'
         exclude 'WEB-INF/updatedata/empty.jar'
         filter(ReplaceTokens, tokens: [
             OPENCMS_VERSION_NUMBER: project.version,
@@ -1018,7 +1677,7 @@ tasks.register('updater', Zip) {
         exclude 'WEB-INF/updatedata/**/*.txt'
         exclude 'WEB-INF/updatedata/**/*.jsp'
         exclude 'WEB-INF/updatedata/config/opencms.xml'
-        exclude 'WEB-INF/updatedata/readme.txt'
+        exclude 'WEB-INF/updatedata/readme_*.txt'
         exclude 'WEB-INF/updatedata/empty.jar'
     }
 
@@ -1056,7 +1715,8 @@ tasks.register('updater', Zip) {
         include '**/*'
     }
 
-    from ("${projectDir}/webapp/WEB-INF/updatedata/readme.txt"){
+    from ("${projectDir}/webapp/WEB-INF/updatedata/readme_${eeTarget}.txt"){
+        rename { 'readme.txt' }
         filter(ReplaceTokens, tokens: [
             OPENCMS_VERSION_NUMBER: project.version,
             OPENCMS_VERSION: product_name+' '+ project.version
@@ -1067,7 +1727,7 @@ tasks.register('updater', Zip) {
         include 'opencms.tld'
         exclude 'web.xml'
         include 'cmsshell.sh'
-        include 'classes/META-INF/persistence.xml'
+        include 'classes/META-INF/**'
         include 'classes/ehcache.xml'
         include 'classes/repository.properties'
         include 'sun-jaxws.xml'
@@ -1116,18 +1776,29 @@ tasks.register('updater', Zip) {
 }
 
 tasks.register('bindist', Zip) {
-    dependsOn war
+    dependsOn war, storageMigrationJar, storageMaintenanceJar
     archiveBaseName = 'opencms'
     from layout.buildDirectory.file("distributions/opencms.war").get().asFile
-    from(projectDir) {
+    from('assets/docs') {
         include 'INSTALL.md'
-        include 'LICENSE'
-        include 'README.md'
-        include 'history.txt'
         filter(ReplaceTokens, tokens: [
             OPENCMS_VERSION_NUMBER: project.version,
             OPENCMS_VERSION: product_name+' '+ project.version
         ])
+    }
+    from(projectDir) {
+        include 'LICENSE'
+        include 'README.md'
+        include 'history.txt'
+        include 'assets/opencms-logo.svg'
+        filter(ReplaceTokens, tokens: [
+            OPENCMS_VERSION_NUMBER: project.version,
+            OPENCMS_VERSION: product_name+' '+ project.version
+        ])
+    }
+    into('tools/storage') {
+        from tasks.named('storageMigrationJar')
+        from tasks.named('storageMaintenanceJar')
     }
 }
 
@@ -1135,6 +1806,7 @@ tasks.register('bindist', Zip) {
 // Shared configuration for all test tasks
 tasks.withType(Test).configureEach {
     maxHeapSize = "2000m"
+    jvmArgs += ['--enable-native-access=ALL-UNNAMED']
     useJUnit()
     scanForTestClasses = false
     testLogging.showStandardStreams = true
@@ -1142,47 +1814,148 @@ tasks.withType(Test).configureEach {
 }
 
 def coreTestConfig = {
+    useJUnitPlatform()
+    if (project.hasProperty('test.forkEvery')) {
+        forkEvery = project.property('test.forkEvery').toString().toLong()
+    }
     testClassesDirs = files(sourceSets.test.java.classesDirectory)
     systemProperties['test.data.path'] = "${projectDir}/test/data"
     systemProperties['test.webapp.path'] = "${projectDir}/webapp"
     systemProperties['test.project.path'] = "${projectDir}"
     systemProperties['test.build.folder'] = sourceSets.test.output.resourcesDir
+    if (project.hasProperty('dbProduct')) {
+        systemProperties['db.product'] = project.property('dbProduct')
+    }
+    systemProperties['opencms.test.verbose'] = providers.systemProperty('opencms.test.verbose')
+        .orElse(providers.environmentVariable('OPENCMS_TEST_VERBOSE'))
+        .orElse('false')
+        .get()
+    // disables the snapshot setup optimization (OpenCmsTestSnapRunner) so the traditional full
+    // import runs instead; pass -PnoSnapshot=true or -Dopencms.test.snapshot.disabled=true
+    systemProperties['opencms.test.snapshot.disabled'] = providers.gradleProperty('noSnapshot')
+        .orElse(providers.systemProperty('opencms.test.snapshot.disabled'))
+        .orElse('false')
+        .get()
     inputs.dir "${projectDir}/test/data"
     inputs.dir "${projectDir}/webapp"
+    systemProperty 'javax.xml.parsers.SAXParserFactory', 'org.apache.xerces.jaxp.SAXParserFactoryImpl'
+    systemProperty 'org.apache.xerces.xni.parser.XMLParserConfiguration', 'org.apache.xerces.parsers.SecureProcessingConfiguration'
+    systemProperty 'org.opencms.test', '1'
+
 }
+
+def storageBackendTestPatterns = [
+    'org.opencms.db.storage.Test*'
+]
+
+def storageVfsRegressionTestClasses = [
+    'org.opencms.file.TestStorageVfsDriver',
+    'org.opencms.file.TestCreateWriteResource',
+    'org.opencms.file.TestReadResource',
+    'org.opencms.file.TestPublishing',
+    'org.opencms.file.TestHistory',
+    'org.opencms.file.TestSiblings',
+    'org.opencms.file.TestDeletion',
+    'org.opencms.file.TestReplace',
+    'org.opencms.file.TestRestoreFromHistory'
+]
 
 test {
     configure coreTestConfig
-    description "Runs the complete test suite 'org.opencms.test.AllTests'."
+    // includes = ['org/opencms/test/AllTestsBridge.class']
+    description = "Runs the complete OpenCms core test suite."
 
-    filter.includeTestsMatching("org.opencms.test.AllTests")
+    includes = ['**/Test*.class']
+    excludes = [
+        'org/opencms/db/storage/Test*.class',
+        'org/opencms/file/TestStorageVfsDriver.class'
+    ]
+    scanForTestClasses = true
+}
+
+tasks.register('testStorage', Test) {
+    description = "Runs the storage backend tests and selected VFS regression tests with external storage enabled."
+    group = 'verification'
+    configure coreTestConfig
+    classpath = sourceSets.test.runtimeClasspath
+    testClassesDirs = files(sourceSets.test.java.classesDirectory)
+    useJUnitPlatform()
+    outputs.upToDateWhen { false }
+    [
+        'opencms.s3.test.endpoint': 'OPENCMS_S3_TEST_ENDPOINT',
+        'opencms.s3.test.bucket': 'OPENCMS_S3_TEST_BUCKET',
+        'opencms.s3.test.accessKey': 'OPENCMS_S3_TEST_ACCESS_KEY',
+        'opencms.s3.test.secretKey': 'OPENCMS_S3_TEST_SECRET_KEY',
+        'opencms.s3.test.pathStyle': 'OPENCMS_S3_TEST_PATH_STYLE',
+        'opencms.s3.test.region': 'OPENCMS_S3_TEST_REGION',
+        'opencms.s3.test.listingCount': 'OPENCMS_S3_TEST_LISTING_COUNT'
+    ].each { propertyName, environmentName ->
+        Provider<String> value = providers.gradleProperty(propertyName)
+            .orElse(providers.systemProperty(propertyName))
+            .orElse(providers.environmentVariable(environmentName))
+        if (value.present) {
+            systemProperties[propertyName] = value.get()
+        }
+    }
+
+    doFirst {
+        delete reports.html.outputLocation.get().asFile
+        delete reports.junitXml.outputLocation.get().asFile
+        def dbProduct = systemProperties['db.product'] ?: 'hsqldb'
+        systemProperties['test.config.folder'] = "config.${dbProduct}_storage"
+        logger.lifecycle("Running storage tests with ${systemProperties['test.config.folder']}")
+    }
+
+    filter {
+        storageBackendTestPatterns.each { includeTestsMatching it }
+        storageVfsRegressionTestClasses.each { includeTestsMatching it }
+    }
+}
+
+tasks.register('testStorageMigrationIntegration', Test) {
+    description = "Runs optional storage migration tool integration tests against an explicitly enabled database."
+    group = 'verification'
+    configure coreTestConfig
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.tools.runtimeClasspath
+    testClassesDirs = files(sourceSets.test.java.classesDirectory)
+    useJUnitPlatform()
+    ignoreFailures = false
+    outputs.upToDateWhen { false }
+
+    if (project.hasProperty('storageMigrationTestDbs')) {
+        systemProperties['opencms.storage.migration.test.dbs'] = project.property('storageMigrationTestDbs')
+    }
+
+    doFirst {
+        delete reports.html.outputLocation.get().asFile
+        delete reports.junitXml.outputLocation.get().asFile
+        def dbProduct = systemProperties['db.product'] ?: 'hsqldb'
+        logger.lifecycle("Running storage migration integration tests for db.product=${dbProduct}")
+        logger.lifecycle("Enable databases with -PstorageMigrationTestDbs=${dbProduct} or OPENCMS_STORAGE_MIGRATION_TEST_DBS.")
+    }
+
+    filter {
+        includeTestsMatching 'org.opencms.tools.storage.TestCmsStorageMigrationToolIntegration'
+    }
 }
 
 tasks.register('testSingle', Test) {
-    description "Runs a specified test case. Equivalent to standard 'test' task. \n" +
-                "NOTE: Usage of legacy '-PtestCaseToRun' property is DEPRECATED. Use standard '--tests' filtering instead. \n" +
-                "Conflict Resolution: If both '-PtestCaseToRun' and '--tests' are defined, standard '--tests' takes precedence. \n" +
-                "Default: Runs TestCmsSystemInfo test case if no filters are provided."
-    group 'verification'
+    description = "Runs a specified test case. Equivalent to standard 'test' task.\n Default: Runs TestCmsSystemInfo test case if no filters are provided."
+    group = 'verification'
     configure coreTestConfig
+    classpath = sourceSets.test.runtimeClasspath
+    testClassesDirs = files(sourceSets.test.java.classesDirectory)
+    useJUnitPlatform()
+    ignoreFailures = false
+    doNotTrackState("Single-test execution uses ad hoc filters and generated result paths.")
+    outputs.upToDateWhen { false } // makes --rerun the default
 
     doFirst{
+        delete reports.html.outputLocation.get().asFile
+        delete reports.junitXml.outputLocation.get().asFile
         logger.info("Test filter configuration - commandLineIncludePatterns: ${filter.commandLineIncludePatterns}, includePatterns: ${filter.includePatterns}")
 
         boolean hasExplicit = !filter.commandLineIncludePatterns.empty || !filter.includePatterns.empty
-        
-        // Backward compatibility: Check for -PtestCaseToRun property
-        if (project.hasProperty('testCaseToRun')) {
-             if (hasExplicit) {
-                 logger.warn("WARNING: Both -PtestCaseToRun and --tests filters are present. Using standard Gradle filters and ignoring legacy property.")
-             } else {
-                 def legacyTestInfo = project.property('testCaseToRun')
-                 logger.warn("DEPRECATION WARNING: The 'testCaseToRun' property is deprecated. Please use standard Gradle filtering: ./gradlew testSingle --tests ${legacyTestInfo}")
-                 filter.includeTestsMatching "${legacyTestInfo}*"
-                 hasExplicit = true
-             }
-        }
-
         logger.debug("hasExplicitTestSelection: ${hasExplicit}")
 
         if (!hasExplicit) {
@@ -1228,10 +2001,8 @@ tasks.register('testGwt', Test) {
     classpath += files("${projectDir}/src-gwt")
     classpath += files("${projectDir}/test-gwt")
     useJUnit()
-    filter {
-        includeTestsMatching 'org.opencms.client.test.AllTests'
-    }
-    scanForTestClasses = false
+    includes = ['org/opencms/client/test/AllTestsBridge.class']
+    scanForTestClasses = true
     testClassesDirs = files(sourceSets.testGwt.java.classesDirectory)
     systemProperties['gwt.args'] = "-logLevel WARN -setProperty locale=en"
     systemProperties['java.awt.headless'] = "true"
@@ -1240,52 +2011,57 @@ tasks.register('testGwt', Test) {
     ignoreFailures = true
 }
 
-artifacts {
-    archives sourcesJar
+def legacyArchiveTasks = [
+    sourcesJar,
+    setupJar,
+    sourcesJarSetup,
+    modulesJar,
+    sourcesJarModules,
+    gwtJar,
+    sourcesJarGwt,
+    testJar,
+    sourcesJarTest,
+]
 
-    if (gradle.startParameter.taskNames.contains("uploadArchives")) {
-        // do not include the war if only running the install task, it takes ages to build
-        archives war
-        archives resourcesJar
+if (gradle.startParameter.taskNames.contains('uploadArchives')) {
+    // do not include the war if only running the install task, it takes ages to build
+    legacyArchiveTasks.add(war)
+    legacyArchiveTasks.add(resourcesJar)
+}
+
+tasks.each { task ->
+    if (task.name.startsWith('jar_org.opencms.')) {
+        def moduleName = task.archiveBaseName.get()
+        legacyArchiveTasks.add(task)
+        def sourcesTask = tasks.findByName("sourcesJar_${moduleName}")
+        if (sourcesTask != null) {
+            legacyArchiveTasks.add(sourcesTask)
+        }
     }
+}
 
-    archives setupJar
-    archives sourcesJarSetup
-
-    archives modulesJar
-    archives sourcesJarModules
-
-    archives gwtJar
-    archives sourcesJarGwt
-
-    archives testJar
-    archives sourcesJarTest
-
+// in case the property 'skip_javadoc' is set to 'true', javadoc generation is skipped - this is supposed to speed up build time for CI
+if (addJavadoc) {
+    legacyArchiveTasks.addAll([
+        javadocJar,
+        javadocJarSetup,
+        javadocJarModules,
+        javadocJarGwt,
+        javadocJarTest,
+    ])
     tasks.each { task ->
-        if (task.name.startsWith("jar_org.opencms.")){
-            def moduleName=task.archiveBaseName
-            archives task
-            if (tasks.hasProperty("sourcesJar_$moduleName")) {
-                archives tasks["sourcesJar_$moduleName"]
+        if (task.name.startsWith('jar_org.opencms.')) {
+            def moduleName = task.archiveBaseName.get()
+            def javadocTask = tasks.findByName("javadocJar_${moduleName}")
+            if (javadocTask != null) {
+                legacyArchiveTasks.add(javadocTask)
             }
         }
     }
-    // in case the property 'skip_javadoc' is set to 'true', javadoc generation is skipped - this is supposed to speed up build time for CI
-    if (addJavadoc) {
-        archives javadocJar
-        archives javadocJarSetup
-        archives javadocJarModules
-        archives javadocJarGwt
-        archives javadocJarTest
-        tasks.each { task ->
-            if (task.name.startsWith("jar_org.opencms.")) {
-                def moduleName=task.archiveBaseName
-                if (tasks.hasProperty("javadocJar_$moduleName")) {
-                    archives tasks["javadocJar_$moduleName"]
-                }
-            }
-        }
-    }
+}
+
+tasks.named('assemble') {
+    dependsOn(legacyArchiveTasks.toSet())
 }
 
 
@@ -1300,6 +2076,7 @@ publishing {
                 description = product_description
                 packaging = 'jar'
                 groupId = 'org.opencms'
+                artifactId = "opencms-core${pVariant.get()}"
                 url = 'http://www.opencms.org'
                 scm {
                     url = 'scm:git@github.com:alkacon/opencms-core.git'
@@ -1332,9 +2109,11 @@ publishing {
                         asNode().dependencies.'*'.each() { dep ->
                             if (dep.scope.text() == 'runtime' && dep.artifactId.text() in [
                                         'javax.servlet-api',
-                                        'javax.servlet.jsp-api'
+                                        'javax.servlet.jsp-api',
+                                        'jakarta.servlet-api',
+                                        'jakarta.servlet.jsp-api'
                                     ]) {
-                                println("Correcting scope for dependency ${dep.artifactId.text()}")
+                                logger.lifecycle("Correcting scope for dependency ${dep.artifactId.text()}")
                                 dep.scope.first().setValue('compile')
                             }
                         }
@@ -1398,7 +2177,7 @@ publishing {
                     artifact art
                 }
                 pom {
-                    artifactId = "opencms-${pub.key}"
+                    artifactId = "opencms-${pub.key}${pVariant.get()}"
                     name = product_name
                     description = product_description
                     packaging = 'jar'
@@ -1440,7 +2219,7 @@ publishing {
                                 }
                             }
                             def dependencyNode = deps.appendNode('dependency')
-                            dependencyNode.appendNode('artifactId','opencms-core')
+                            dependencyNode.appendNode('artifactId', "opencms-core${pVariant.get()}")
                             dependencyNode.appendNode('groupId','org.opencms')
                             dependencyNode.appendNode('version',version)
                         }
@@ -1452,7 +2231,7 @@ publishing {
                             }
                             def dependenciesNode = asNode().appendNode('dependencies')
                             def dependencyNode = dependenciesNode.appendNode('dependency')
-                            dependencyNode.appendNode('artifactId','opencms-core')
+                            dependencyNode.appendNode('artifactId', "opencms-core${pVariant.get()}")
                             dependencyNode.appendNode('groupId','org.opencms')
                             dependencyNode.appendNode('version',version)
                         }
@@ -1464,7 +2243,7 @@ publishing {
             webapp(MavenPublication) {
                 artifact war
                 pom {
-                    artifactId 'opencms-webapp'
+                    artifactId "opencms-webapp${pVariant.get()}"
                     name = product_name
                     description = product_description
                     packaging 'war'
@@ -1506,37 +2285,54 @@ publishing {
 tasks.register('install') {
     dependsOn publishToMavenLocal
     doFirst {
-        println "Installing artifacts for version $version"
+        logger.lifecycle("Installing artifacts for version $version")
     }
 }
 
 tasks.register('uploadArchives') { // dependency tasks are set dynamically via afterEvaluate
     doFirst {
-        println "Upload artifacts for version $version"
+        logger.lifecycle("Upload artifacts for version $version")
     }
 }
 
+// fail in case the source is badly formatted
+tasks.named('compileJava') {
+    dependsOn spotlessCheck
+}
 
 // fixed issue with libraries containing both .java and .class files
 tasks.withType(JavaCompile) {
     options.sourcepath=files()
     options.encoding='UTF-8'
     options.incremental = true
+    if (gradle.startParameter.logLevel == LogLevel.QUIET) {
+        options.compilerArgs += ['-Xlint:none', '-nowarn']
+        logging.captureStandardOutput LogLevel.INFO
+        logging.captureStandardError LogLevel.INFO
+    }
 }
 tasks.withType(Javadoc) {
     options.addStringOption("sourcepath", "")
-    if (JavaVersion.current().isJava8Compatible()) {
-        options.addStringOption("Xdoclint:none", "-quiet")
-        options.addBooleanOption("-allow-script-in-comments",true);
-    }
+    options.addStringOption("Xdoclint:none", "-quiet")
+    options.addBooleanOption("-allow-script-in-comments", true)
     doLast {
-        def searchScript = new File(destinationDir.getAbsolutePath() + '/search.js')
+        def searchScript = new File(destinationDir, 'search.js')
         searchScript.append "getURLPrefix = function(ui) { return ''; };"
     }
 }
 // all tasks implementing the CopySpec (Copy,Jar,Zip,...) should fail, in case they generate duplicate files
-tasks.withType(CopySpec) {
-    duplicatesStrategy = 'fail'
+tasks.withType(org.gradle.api.tasks.AbstractCopyTask).configureEach {
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.FAIL
+}
+
+tasks.named('storageMigrationJar') {
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+    zip64 = true
+}
+
+tasks.named('storageMaintenanceJar') {
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+    zip64 = true
 }
 
 
@@ -1551,4 +2347,26 @@ tasks.withType(GenerateModuleMetadata) {
 afterEvaluate {
     def uploadArchivesDeps = [tasks.findByName("publishToSonatype"), tasks.findByName("closeSonatypeStagingRepository")]
     tasks.findByName("uploadArchives").dependsOn(uploadArchivesDeps)
+}
+
+
+// For some reason when opencms-core is built together with the Mercury Template,
+// *and* the Jakarta EE Migration plugin is active, Gradle complains that the different 
+// configurations must be identifiable through their set of attributes and capabilities,
+// and archives and signatures conflict in this way with the default configuration.
+// This is really strange, as the attributes are also not distinct if we only compile the core,
+// or use the javax "mode".
+// So we add an artifactType attribute to disambiguate them. The name or values of the attribute
+// are arbitrary for this, it doesn't seem to matter if we just want to keep Gradle from complaining.
+
+configurations.named("archives") {
+    attributes {
+        attribute(Attribute.of("artifactType", String), "archives")
+    }
+}
+
+configurations.named("signatures") {
+    attributes {
+        attribute(Attribute.of("artifactType", String), "signatures")
+    }
 }

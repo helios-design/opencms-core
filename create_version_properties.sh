@@ -2,11 +2,11 @@
 
 # The OpenCms Version number.
 #
-# If this script is used in the build process, 
+# If this script is used in the build process,
 # you need to change the version number only here and no where else.
 # It can be accessed in OpenCms by OpenCms.getSystemInfo().getVersionNumber().
 #
-OPENCMS_VERSION_NUMBER="${OpenCmsNumber:-9.5.x}"
+OPENCMS_VERSION_NUMBER="${OpenCmsNumber:-unknown}"
 OPENCMS_VERSION_NUMBER="${OpenCmsVersionNumber:-$OPENCMS_VERSION_NUMBER}"
 
 #
@@ -27,14 +27,19 @@ OPENCMS_BUILD_TYPE="${OpenCmsBuildType:-Manual}"
 #
 OPENCMS_BUILD_SYSTEM="${OpenCmsBuildSystem:-Jenkins}"
 
+#
+# The Java EE edition the build targets, e.g. "10 (jakarta)" or "8 (javax)".
+#
+OPENCMS_JAVA_EE="${OpenCmsJavaEE:-10 (jakarta)}"
+
 # The output path/filename where the properties are written.
-# 
+#
 # The idea of this script is as follows:
 # In the RCS there is a 'static' variation of the version properties.
-# If this script is used, the 'static' file from the RCS will 
+# If this script is used, the 'static' file from the RCS will
 # be replaced by a dynamically generated version that contains
 # more detailed information about the build.
-# 
+#
 OUTPUT_BASE="$WORKSPACE"
 
 OUTPUT_FILE="$OUTPUT_BASE/version.properties"
@@ -42,7 +47,7 @@ OUTPUT_FILE="$OUTPUT_BASE/version.properties"
 #
 # Variables set by the CI/build system.
 #
-# These will be provided to OpenCms as list of variables that 
+# These will be provided to OpenCms as list of variables that
 # can be accessed by OpenCms.getSystemInfo().getBuildInfo().
 #
 JENKINS_BUILD_NUMBER="${JENKINS_BUILD_NUMBER:-#$BUILD_NUMBER}"
@@ -57,7 +62,19 @@ if [ $OPENCMS_GIT_BRANCH == "HEAD" ]; then
 fi
 OPENCMS_GIT_ID="${GIT_COMMIT:0:7}"
 OPENCMS_GIT_BRANCH_SHOWN="${OpenCmsGitBranchShown:-$OPENCMS_GIT_BRANCH}"
-OPENCMS_GIT_COMMIT_MESSAGE=$(git log -1 --pretty=%B | cat | tr '\n' ' ')
+#
+# The About dialog prints the Git message in a single table row, so only the
+# commit subject is kept and a long subject is cut at a word boundary. The
+# ellipsis is written as an escape because Java reads version.properties as
+# ISO-8859-1, which would turn a UTF-8 character into mojibake.
+#
+GIT_MESSAGE_MAX_LENGTH=120
+OPENCMS_GIT_COMMIT_MESSAGE=$(git log -1 --pretty=%s | cat | tr '\n' ' ' | sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^ //' -e 's/ $//')
+if [ ${#OPENCMS_GIT_COMMIT_MESSAGE} -gt $GIT_MESSAGE_MAX_LENGTH ]; then
+	GIT_MESSAGE_CUT="${OPENCMS_GIT_COMMIT_MESSAGE:0:$GIT_MESSAGE_MAX_LENGTH}"
+	GIT_MESSAGE_CUT="${GIT_MESSAGE_CUT% *}"
+	OPENCMS_GIT_COMMIT_MESSAGE="$(echo "$GIT_MESSAGE_CUT" | sed 's/[[:space:].,;:!?-]*$//')\u2026"
+fi
 
 #
 # The OpenCms version ID.
@@ -80,6 +97,7 @@ echo "# Build Number      : $OPENCMS_BUILD_NUMBER"
 echo "# Version Number    : $OPENCMS_VERSION_NUMBER"
 echo "# Version ID        : $OPENCMS_VERSION_ID"
 echo "# Version File      : $OUTPUT_FILE"
+echo "# Java EE           : $OPENCMS_JAVA_EE"
 echo "# Git commit        : $OPENCMS_GIT_ID"
 echo "# Git commit message: $OPENCMS_GIT_COMMIT_MESSAGE"
 echo "# Git branch        : $OPENCMS_GIT_BRANCH"
@@ -105,15 +123,17 @@ echo "build.system=$OPENCMS_BUILD_SYSTEM" >> "$OUTPUT_FILE"
 echo "build.gitid=$OPENCMS_GIT_ID" >> "$OUTPUT_FILE"
 echo "build.gitmessage=$OPENCMS_GIT_COMMIT_MESSAGE" >> "$OUTPUT_FILE"
 echo "build.gitbranch=$OPENCMS_GIT_BRANCH_SHOWN" >> "$OUTPUT_FILE"
+echo "javaee=$OPENCMS_JAVA_EE" >> "$OUTPUT_FILE"
 #
 # Nice names for the build information (optional).
 #
 if [ $OPENCMS_BUILD_TYPE != "Milestone" ]; then
     echo "nicename.build.number=Build Number" >> "$OUTPUT_FILE"
-fi    
+fi
 echo "nicename.build.date=Build Date" >> "$OUTPUT_FILE"
 echo "nicename.build.type=Build Type" >> "$OUTPUT_FILE"
 echo "nicename.build.system=Build System" >> "$OUTPUT_FILE"
 echo "nicename.build.gitid=Git Commit ID" >> "$OUTPUT_FILE"
 echo "nicename.build.gitmessage=Git Message" >> "$OUTPUT_FILE"
 echo "nicename.build.gitbranch=Git Branch" >> "$OUTPUT_FILE"
+echo "nicename.javaee=Java EE" >> "$OUTPUT_FILE"

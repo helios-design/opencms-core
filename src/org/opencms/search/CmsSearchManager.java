@@ -29,6 +29,7 @@ package org.opencms.search;
 
 import org.opencms.ade.containerpage.CmsDetailOnlyContainerUtil;
 import org.opencms.configuration.CmsConfigurationException;
+import org.opencms.configuration.CmsParameterConfiguration;
 import org.opencms.db.CmsDriverManager;
 import org.opencms.db.CmsModificationContext;
 import org.opencms.db.CmsPublishedResource;
@@ -53,7 +54,6 @@ import org.opencms.main.CmsIllegalStateException;
 import org.opencms.main.CmsLog;
 import org.opencms.main.I_CmsEventListener;
 import org.opencms.main.OpenCms;
-import org.opencms.main.OpenCmsSolrHandler;
 import org.opencms.relations.CmsRelation;
 import org.opencms.relations.CmsRelationFilter;
 import org.opencms.relations.CmsRelationType;
@@ -82,12 +82,15 @@ import org.opencms.security.CmsRoleViolationException;
 import org.opencms.util.A_CmsModeStringEnumeration;
 import org.opencms.util.CmsFileUtil;
 import org.opencms.util.CmsPriorityLock;
+import org.opencms.util.CmsSecretUtil;
 import org.opencms.util.CmsStringUtil;
 import org.opencms.util.CmsUUID;
 import org.opencms.util.CmsWaitHandle;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.FileSystems;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -101,6 +104,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -114,8 +118,8 @@ import org.apache.commons.logging.Log;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
-import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
 import org.apache.solr.client.solrj.impl.HttpJdkSolrClient.Builder;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.CoreDescriptor;
@@ -367,7 +371,10 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
         CmsSearchOfflineHandler m_handler;
 
         /** Indicates if this thread is still alive. */
-        boolean m_isAlive;
+        volatile boolean m_isAlive;
+
+        /** Whether shutdown must finish the queued index updates. */
+        private volatile boolean m_finishPendingUpdates;
 
         /** Indicates that an index update thread is currently running. */
         private boolean m_isUpdating;
@@ -393,7 +400,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
          * Gets the wait handle used for signalling when the worker thread has finished.
          *
          * @return the wait handle
-         **/
+         */
         public CmsWaitHandle getWaitHandle() {
 
             return m_waitHandle;
@@ -450,6 +457,12 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                         }
                         // this is just called to clear the interrupt status of the thread
                         interrupted();
+                    }
+                }
+                if (m_finishPendingUpdates) {
+                    final List<CmsPublishedResource> resourcesToIndex = getResourcesToIndex();
+                    if (!resourcesToIndex.isEmpty()) {
+                        startOfflineUpdateThread(report, resourcesToIndex);
                     }
                 }
             } finally {
@@ -528,6 +541,52 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
         }
 
         /**
+         * Shuts down the offline indexer after finishing its running and queued updates.<p>
+         *
+         * There is no timeout: a module import can require arbitrarily long indexing, and the indexes
+         * must remain open until it finishes. The editor's maxIndexWaitTime does not limit indexing.<p>
+         *
+         * Temporary stops during index reconfiguration use {@link #shutDown()} instead, since they may
+         * hold indexing locks and must leave queued changes for the replacement indexer.<p>
+         */
+        protected void shutDownAndWait() {
+
+            if (!isAlive()) {
+                return;
+            }
+            final long logIntervalSeconds = 30;
+            final long startTime = System.nanoTime();
+            long lastLogTime = startTime;
+            LOG.info(Messages.get().getBundle().key(Messages.LOG_OI_SHUTDOWN_START_0));
+            m_finishPendingUpdates = true;
+            m_isAlive = false;
+            interrupt();
+            boolean interrupted = false;
+            while (isAlive()) {
+                try {
+                    join(TimeUnit.SECONDS.toMillis(logIntervalSeconds));
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+                final long now = System.nanoTime();
+                if (isAlive() && (TimeUnit.NANOSECONDS.toSeconds(now - lastLogTime) >= logIntervalSeconds)) {
+                    LOG.info(
+                        Messages.get().getBundle().key(
+                            Messages.LOG_OI_SHUTDOWN_WAIT_1,
+                            Long.valueOf(TimeUnit.NANOSECONDS.toSeconds(now - startTime))));
+                    lastLogTime = now;
+                }
+            }
+            LOG.info(
+                Messages.get().getBundle().key(
+                    Messages.LOG_OI_SHUTDOWN_FINISH_1,
+                    Long.valueOf(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime))));
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        /**
          * Updates the offline search indexes for the given list of resources.<p>
          *
          * @param report the report to write the index information to
@@ -556,7 +615,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                     // continue
                     LOG.info(e.getLocalizedMessage(), e);
                 }
-                if (thread.isAlive()) {
+                if (thread.isAlive() && !m_finishPendingUpdates) {
                     LOG.warn(
                         Messages.get().getBundle().key(
                             Messages.LOG_OI_UPDATE_LONG_2,
@@ -816,6 +875,15 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
 
     }
 
+    /** A constant for the optional 'baseUri' parameter. */
+    public static final String PARAM_BASE_URI = "baseUri";
+
+    /** A constant for the optional 'core' parameter. */
+    public static final String PARAM_CORE = "core";
+
+    /** A constant for the optional 'index' parameter. */
+    public static final String PARAM_INDEX = "index";
+
     /** This needs to be a fair lock to preserve order of threads accessing the search manager. */
     private static final CmsPriorityLock OFFLINE_LOCK = new CmsPriorityLock();
 
@@ -848,6 +916,9 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
 
     /** Prefix for Lucene default analyzers package (<code>org.apache.lucene.analysis.</code>). */
     public static final String LUCENE_ANALYZER = "org.apache.lucene.analysis.core.";
+
+    /** Secret key for the Solr basic auth information in form 'user:password' when read from the secret store. */
+    protected static final String SECRET_KEY_SOLR_BASIC_AUTH_CREDENTIALS = "solr.basic.auth";
 
     /** The log object for this class. */
     protected static final Log LOG = CmsLog.getLog(CmsSearchManager.class);
@@ -1012,11 +1083,9 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
         CmsSolrIndex index = null;
         // try to get the index name from the parameters: 'core' or 'index'
         if (params != null) {
-            indexName = params.get(OpenCmsSolrHandler.PARAM_CORE) != null
-            ? params.get(OpenCmsSolrHandler.PARAM_CORE)[0]
-            : (params.get(OpenCmsSolrHandler.PARAM_INDEX) != null
-            ? params.get(OpenCmsSolrHandler.PARAM_INDEX)[0]
-            : null);
+            indexName = params.get(PARAM_CORE) != null
+            ? params.get(PARAM_CORE)[0]
+            : (params.get(PARAM_INDEX) != null ? params.get(PARAM_INDEX)[0] : null);
         }
         if (indexName == null) {
             // if no parameter is specified try to use the default online/offline indexes by context
@@ -2211,13 +2280,13 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
         }
 
         if (index.getServerUrl() != null) { // Use the index-specific Solr-Server if present.
-            HttpJdkSolrClient solrClient = new Builder().withBaseSolrUrl(index.getServerUrl()).build();
+            SolrClient solrClient = getSolrClient(index.getServerUrl());
             index.setSolrServer(solrClient);
         } else if (m_solrConfig.getServerUrl() != null) { // Use the globally configured external Solr-Server if present.
             // HTTP Server configured
             // TODO Implement multi core support for HTTP server
             // @see http://lucidworks.lucidimagination.com/display/solr/Configuring+solr.xml
-            index.setSolrServer(new Builder().withBaseSolrUrl(m_solrConfig.getServerUrl()).build());
+            index.setSolrServer(getSolrClient(m_solrConfig.getServerUrl()));
         } else { // Default to the embedded Solr Server
 
             // get the core container that contains one core for each configured index
@@ -2267,7 +2336,12 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 properties.put(CoreDescriptor.CORE_DATADIR, dataDir.getAbsolutePath());
                 properties.put(CoreDescriptor.CORE_CONFIGSET, "default");
                 core = m_coreContainer.create(index.getCoreName(), instanceDir.toPath(), properties, false);
-            } catch (NullPointerException e) {
+            } catch (RuntimeException e) {
+                // catch not only NPE, but also e.g. SolrException when the core cannot be created
+                // (like IndexFormatTooOldException for an index written by an older Lucene version):
+                // otherwise the exception propagates past the CmsConfigurationException handling in
+                // CmsSolrIndex#initialize(), the index stays enabled without a Solr client and every
+                // query later fails with a NullPointerException on the missing client
                 if (core != null) {
                     core.close();
                 }
@@ -2766,28 +2840,37 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
      */
     public void shutDown() {
 
-        m_instantPublishIndexQueue.shutdown();
+        boolean interrupted = Thread.interrupted();
+        try {
+            m_instantPublishIndexQueue.shutdown();
 
-        if (m_offlineIndexThread != null) {
-            m_offlineIndexThread.shutDown();
-        }
+            if (m_offlineHandler != null) {
+                OpenCms.removeCmsEventListener(m_offlineHandler);
+            }
 
-        if (m_offlineHandler != null) {
-            OpenCms.removeCmsEventListener(m_offlineHandler);
-        }
+            if (m_offlineIndexThread != null) {
+                m_offlineIndexThread.shutDownAndWait();
+            }
+            // Lucene cleanup must finish before restoring the caller's interrupt status.
+            interrupted |= Thread.interrupted();
 
-        Iterator<I_CmsSearchIndex> i = m_indexes.iterator();
-        while (i.hasNext()) {
-            I_CmsSearchIndex index = i.next();
-            index.shutDown();
-            index = null;
-        }
-        m_indexes.clear();
+            Iterator<I_CmsSearchIndex> i = m_indexes.iterator();
+            while (i.hasNext()) {
+                I_CmsSearchIndex index = i.next();
+                index.shutDown();
+                index = null;
+            }
+            m_indexes.clear();
 
-        shutDownSolrContainer();
+            shutDownSolrContainer();
 
-        if (CmsLog.INIT.isInfoEnabled()) {
-            CmsLog.INIT.info(Messages.get().getBundle().key(Messages.INIT_SHUTDOWN_MANAGER_0));
+            if (CmsLog.INIT.isInfoEnabled()) {
+                CmsLog.INIT.info(Messages.get().getBundle().key(Messages.INIT_SHUTDOWN_MANAGER_0));
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -3037,6 +3120,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
         I_CmsDocumentFactory documentFactory = null;
         List<String> resourceTypes = null;
         List<String> mimeTypes = null;
+        CmsParameterConfiguration params = null;
         Class<?> c = null;
 
         m_documentTypes = new LinkedHashMap<String, Map<String, I_CmsDocumentFactory>>();
@@ -3050,6 +3134,7 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 className = documenttype.getClassName();
                 resourceTypes = documenttype.getResourceTypes();
                 mimeTypes = documenttype.getMimeTypes();
+                params = documenttype.getConfiguration();
 
                 if (name == null) {
                     throw new CmsIndexException(Messages.get().container(Messages.ERR_DOCTYPE_NO_NAME_0));
@@ -3071,6 +3156,11 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                         exc);
                 } catch (Exception exc) {
                     throw new CmsIndexException(Messages.get().container(Messages.ERR_DOCCLASS_INIT_1, className), exc);
+                }
+                if (params != null) {
+                    for (Entry<String, String> param : params.entrySet()) {
+                        documentFactory.addConfigurationParameter(param.getKey(), param.getValue());
+                    }
                 }
 
                 if (documentFactory.isUsingCache()) {
@@ -3125,6 +3215,10 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
                 try {
                     index.initialize();
                 } catch (Exception e) {
+                    // disable the index - without this, an initialization failure that is not
+                    // handled inside initialize() itself leaves the index enabled and the
+                    // status report below wrongly logs it as successfully configured
+                    index.setEnabled(false);
                     if (CmsLog.INIT.isWarnEnabled()) {
                         // in this case the index will be disabled
                         CmsLog.INIT.warn(Messages.get().getBundle().key(Messages.INIT_SEARCH_INIT_FAILED_1, index), e);
@@ -3776,6 +3870,44 @@ public class CmsSearchManager implements I_CmsScheduledJob, I_CmsEventListener {
         }
         result.retainAll(deletedSet);
         return result;
+    }
+
+    /**
+     * Initializes the Solr client for external Solr servers
+     * @param serverUrl the external server url
+     * @return the solr client
+     */
+    private SolrClient getSolrClient(String serverUrl) {
+
+        URI uri = URI.create(serverUrl);
+        String basicAuthCredentials = uri.getUserInfo();
+        if (basicAuthCredentials == null) {
+            basicAuthCredentials = CmsSecretUtil.getSecret(SECRET_KEY_SOLR_BASIC_AUTH_CREDENTIALS);
+        }
+        try {
+            URI cleanUri = new URI(
+                uri.getScheme(),
+                null,
+                uri.getHost(),
+                uri.getPort(),
+                uri.getPath(),
+                uri.getQuery(),
+                uri.getFragment());
+            serverUrl = cleanUri.toString();
+        } catch (URISyntaxException e) {
+            if (CmsLog.INIT.isWarnEnabled()) {
+                CmsLog.INIT.warn(
+                    "Failed to clean the provided external solr server url. Defaulting to the raw URL.",
+                    e);
+            }
+        }
+        Builder clientBuilder = new Builder().withBaseSolrUrl(serverUrl).withConnectionTimeout(
+            15,
+            TimeUnit.SECONDS).withRequestTimeout(120, TimeUnit.SECONDS).useHttp1_1(
+                true).withOptionalBasicAuthCredentials(basicAuthCredentials);
+
+        return clientBuilder.build();
+
     }
 
     /**

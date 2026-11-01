@@ -547,7 +547,7 @@ implements HasValue<Date>, I_CmsFormWidget, I_CmsHasInit, HasKeyPressHandlers, I
      */
     public void onTimeClick() {
 
-        updateFromPicker();
+        checkTime();
     }
 
     /**
@@ -859,7 +859,11 @@ implements HasValue<Date>, I_CmsFormWidget, I_CmsHasInit, HasKeyPressHandlers, I
         if (m_previewRegistration != null) {
             m_previewRegistration.removeHandler();
         }
-        checkTime();
+        if (isValidTime()) {
+            updateFromPicker();
+        } else {
+            checkTime();
+        }
     }
 
     /**

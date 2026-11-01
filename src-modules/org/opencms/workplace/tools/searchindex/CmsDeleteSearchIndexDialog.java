@@ -33,9 +33,9 @@ import org.opencms.workplace.tools.CmsToolManager;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A <code>CmsWidgetDialog</code> that starts a (confirmed) delete dialog for
@@ -116,9 +116,10 @@ public class CmsDeleteSearchIndexDialog extends A_CmsEditSearchIndexDialog {
             // create the widgets for the first dialog page
             result.append(dialogBlockStart(key(Messages.GUI_LIST_SEARCHINDEX_MACTION_DELETE_NAME_0)));
             result.append(createWidgetTableStart());
-            result.append(key(
-                Messages.GUI_LIST_SEARCHINDEX_ACTION_DELETE_CONF_1,
-                new Object[] {getSearchIndexIndex().getName()}));
+            result.append(
+                key(
+                    Messages.GUI_LIST_SEARCHINDEX_ACTION_DELETE_CONF_1,
+                    new Object[] {getSearchIndexIndex().getName()}));
             result.append(createWidgetTableEnd());
             result.append(dialogBlockEnd());
         }

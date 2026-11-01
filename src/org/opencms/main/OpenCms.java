@@ -29,6 +29,7 @@ package org.opencms.main;
 
 import org.opencms.ade.configuration.CmsADEManager;
 import org.opencms.cache.CmsVfsMemoryObjectCache;
+import org.opencms.configuration.CmsImageCacheConfiguration;
 import org.opencms.crypto.I_CmsTextEncryption;
 import org.opencms.db.CmsAliasManager;
 import org.opencms.db.CmsDefaultUsers;
@@ -42,6 +43,7 @@ import org.opencms.file.quota.CmsFolderSizeTracker;
 import org.opencms.flex.CmsFlexCache;
 import org.opencms.i18n.CmsLocaleManager;
 import org.opencms.importexport.CmsImportExportManager;
+import org.opencms.jsp.I_CmsElementMarker;
 import org.opencms.jsp.userdata.CmsUserDataRequestManager;
 import org.opencms.letsencrypt.CmsLetsEncryptConfiguration;
 import org.opencms.loader.CmsResourceManager;
@@ -75,10 +77,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * The OpenCms "operating system" that provides
@@ -276,6 +278,16 @@ public final class OpenCms {
     }
 
     /**
+     * Returns the configured element marker handler (a no-op default when none is configured).
+     *
+     * @return the element marker handler (never <code>null</code>)
+     */
+    public static I_CmsElementMarker getElementMarker() {
+
+        return OpenCmsCore.getInstance().getElementMarker();
+    }
+
+    /**
      * Returns the event manger that handles all OpenCms events.<p>
      *
      * @return the event manger that handles all OpenCms events
@@ -317,7 +329,7 @@ public final class OpenCms {
     }
 
     /**
-     * Creates a string containing all current flex cache keys, for use in debugging.<p<
+     * Creates a string containing all current flex cache keys, for use in debugging.<p>
      *
      * @return a string containing all current flex cache keys
      */
@@ -329,12 +341,22 @@ public final class OpenCms {
     /**
      * Gets the folder size tracker for the Offline or Online project.
      *
-     * @param true if we want the Online folder size tracker, false for the Offline project one
+     * @param online if we want the Online folder size tracker, false for the Offline project one
      * @return the folder size tracker
      */
     public static CmsFolderSizeTracker getFolderSizeTracker(boolean online) {
 
         return OpenCmsCore.getInstance().getFolderSizeTracker(online);
+    }
+
+    /**
+     * Returns the central image cache retention and maintenance configuration.<p>
+     *
+     * @return the image cache configuration
+     */
+    public static CmsImageCacheConfiguration getImageCacheConfiguration() {
+
+        return OpenCmsCore.getInstance().getImageCacheConfiguration();
     }
 
     /**

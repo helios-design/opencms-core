@@ -44,14 +44,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.JspWriter;
-import javax.servlet.jsp.PageContext;
+import org.apache.commons.fileupload2.core.DiskFileItem;
 
-import org.apache.commons.fileupload.FileItem;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.JspWriter;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Abstract class to upload a zip file containing VFS resources with HTTP upload.<p>
@@ -179,17 +179,6 @@ public abstract class A_CmsImportFromHttp extends CmsDialog {
     }
 
     /**
-     * Html code for the additional parameters.<p>
-     *
-     * @return html code
-     */
-    protected String getAdditionalParameters() {
-
-        // do nothing
-        return "";
-    }
-
-    /**
      * Gets a database import file from the client and copies it to the server.<p>
      *
      * @param destination the destination of the file on the server
@@ -202,8 +191,8 @@ public abstract class A_CmsImportFromHttp extends CmsDialog {
     protected String copyFileToServer(String destination) throws CmsIllegalArgumentException, CmsRfsException {
 
         // get the file item from the multipart request
-        Iterator<FileItem> i = getMultiPartFileItems().iterator();
-        FileItem fi = null;
+        Iterator<DiskFileItem> i = getMultiPartFileItems().iterator();
+        DiskFileItem fi = null;
         while (i.hasNext()) {
             fi = i.next();
             if (fi.getName() != null) {
@@ -220,8 +209,13 @@ public abstract class A_CmsImportFromHttp extends CmsDialog {
         if ((fi != null) && CmsStringUtil.isNotEmptyOrWhitespaceOnly(fi.getName())) {
             // file name has been specified, upload the file
             fileName = fi.getName();
-            byte[] content = fi.get();
-            fi.delete();
+            byte[] content = null;
+            try {
+                content = fi.get();
+                fi.delete();
+            } catch (IOException e) {
+                throw new CmsRfsException(Messages.get().container(Messages.ERR_FILE_NOT_WRITTEN_0, e));
+            }
             // get the file name without folder information
             fileName = CmsResource.getName(fileName.replace('\\', '/'));
             // first create the folder if it does not exist
@@ -334,6 +328,17 @@ public abstract class A_CmsImportFromHttp extends CmsDialog {
     }
 
     /**
+     * Html code for the additional parameters.<p>
+     *
+     * @return html code
+     */
+    protected String getAdditionalParameters() {
+
+        // do nothing
+        return "";
+    }
+
+    /**
      * Returns the dialog exception.<p>
      *
      * @return the dialog exception
@@ -350,7 +355,7 @@ public abstract class A_CmsImportFromHttp extends CmsDialog {
     protected abstract void initMessages();
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

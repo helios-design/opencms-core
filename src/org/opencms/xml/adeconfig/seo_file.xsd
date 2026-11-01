@@ -32,7 +32,7 @@
                 <xmlbundle name="org.opencms.xml.adeconfig.seo_file.xml">
                 <bundle locale="en">
                     <resource key="label.SeoFile.Mode">Mode</resource>
-                    <resource key="label.SeoFile.Mode.help">Depending on the mode, this file will be either rendered as an XML sitemap or a robots.txt file which lists all sitemaps from  the site.</resource>
+                    <resource key="label.SeoFile.Mode.help">Depending on the mode, this file will be either rendered as an XML sitemap or a robots.txt file which lists all sitemaps from the site.</resource>
                     <resource key="label.SeoFile.ComputeContPageDates">Container page dates</resource>
                     <resource key="label.SeoFile.ComputeContPageDates.help">Enables or disables the (relatively expensive) computation of container page modification dates for the XML sitemap.</resource>
                     <resource key="label.SeoFile.Cache">Cache</resource>
@@ -67,7 +67,6 @@
                     <resource key="label.SeoFile.GeneratorClass.help">Der Name der Java-Klasse, die für die Erzeugung der Sitemap verwendet werden soll (optional).</resource>
                     <resource key="label.SeoFile.ServerUrl">Server-URL</resource>
                     <resource key="label.SeoFile.ServerUrl.help">Kann verwendet werden, um den Servernamen in den erzeugten Links der XML-Sitemap zu überschreiben.</resource>
-
                     <resource key="choice.xmlsitemap">XML-Sitemap</resource>
                     <resource key="choice.robotstxt">robots.txt</resource>
                 </bundle>

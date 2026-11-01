@@ -51,8 +51,8 @@ import org.apache.commons.logging.Log;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.gwt.user.server.rpc.RPC;
 import com.google.gwt.user.server.rpc.impl.ServerSerializationStreamReader;
+import com.google.gwt.user.server.rpc.jakarta.RPC;
 import com.vaadin.server.AbstractExtension;
 import com.vaadin.ui.UI;
 
@@ -92,6 +92,7 @@ public class CmsPropertyDialogExtension extends AbstractExtension implements I_C
      * @param updateListener the update listener
      */
     public CmsPropertyDialogExtension(UI ui, I_CmsUpdateListener<String> updateListener) {
+
         extend(ui);
         m_updateListener = updateListener;
         registerRpc(this, I_CmsPropertyServerRpc.class);

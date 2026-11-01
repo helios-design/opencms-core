@@ -36,10 +36,10 @@ import org.opencms.util.CmsStringUtil;
 
 import java.util.Locale;
 
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Implementation of the <code>&lt;cms:navigation var="..." /&gt;</code> tag,
@@ -51,6 +51,7 @@ public class CmsJspTagNavigation extends CmsJspScopedVarBodyTagSuport {
 
     /** Constants for <code>type</code> attribute interpretation. */
     public enum Type {
+
         /** Bread crumb navigation. */
         breadCrumb,
         /** Navigation for folder. */
@@ -124,7 +125,7 @@ public class CmsJspTagNavigation extends CmsJspScopedVarBodyTagSuport {
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() throws CmsIllegalArgumentException {
@@ -187,7 +188,7 @@ public class CmsJspTagNavigation extends CmsJspScopedVarBodyTagSuport {
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#release()
+     * @see jakarta.servlet.jsp.tagext.Tag#release()
      */
     @Override
     public void release() {

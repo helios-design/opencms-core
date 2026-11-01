@@ -42,23 +42,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.WriteListener;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
-
 import org.apache.commons.logging.Log;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.WriteListener;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
 
 /**
  * This servlet filter post-processes the response output for requests with the parameter '__json=true'.<p>
@@ -79,11 +79,12 @@ public class CmsJsonPartFilter implements Filter {
          * @param request the wrapped request
          */
         public RequestWrapper(HttpServletRequest request) {
+
             super(request);
         }
 
         /**
-         * @see javax.servlet.ServletRequestWrapper#getParameter(java.lang.String)
+         * @see jakarta.servlet.ServletRequestWrapper#getParameter(java.lang.String)
          */
         @Override
         public String getParameter(String name) {
@@ -96,7 +97,7 @@ public class CmsJsonPartFilter implements Filter {
         }
 
         /**
-         * @see javax.servlet.ServletRequestWrapper#getParameterMap()
+         * @see jakarta.servlet.ServletRequestWrapper#getParameterMap()
          */
         @Override
         public Map<String, String[]> getParameterMap() {
@@ -107,7 +108,7 @@ public class CmsJsonPartFilter implements Filter {
         }
 
         /**
-         * @see javax.servlet.ServletRequestWrapper#getParameterNames()
+         * @see jakarta.servlet.ServletRequestWrapper#getParameterNames()
          */
         @Override
         public Enumeration<String> getParameterNames() {
@@ -118,7 +119,7 @@ public class CmsJsonPartFilter implements Filter {
         }
 
         /**
-         * @see javax.servlet.ServletRequestWrapper#getParameterValues(java.lang.String)
+         * @see jakarta.servlet.ServletRequestWrapper#getParameterValues(java.lang.String)
          */
         @Override
         public String[] getParameterValues(String name) {
@@ -144,6 +145,7 @@ public class CmsJsonPartFilter implements Filter {
          * @param response the original response
          */
         public ResponseWrapper(HttpServletResponse response) {
+
             super(response);
         }
 
@@ -161,12 +163,27 @@ public class CmsJsonPartFilter implements Filter {
         }
 
         /**
-         * @see javax.servlet.ServletResponseWrapper#getOutputStream()
+         * @see jakarta.servlet.ServletResponseWrapper#getOutputStream()
          */
         @Override
         public ServletOutputStream getOutputStream() {
 
             return new ServletOutputStream() {
+
+                /**
+                 * @see jakarta.servlet.ServletOutputStream#isReady()
+                 */
+                @Override
+                public boolean isReady() {
+
+                    return null != m_byteStream;
+                }
+
+                /**
+                 * @see jakarta.servlet.ServletOutputStream#setWriteListener(jakarta.servlet.WriteListener)
+                 */
+                @Override
+                public void setWriteListener(WriteListener writeListener) {}
 
                 /**
                  * @see java.io.OutputStream#write(byte[])
@@ -194,27 +211,11 @@ public class CmsJsonPartFilter implements Filter {
 
                     m_byteStream.write(b);
                 }
-
-                /**
-                 * @see javax.servlet.ServletOutputStream#isReady()
-                 */
-                @Override
-                public boolean isReady() {
-
-                    return null != m_byteStream;
-                }
-
-                /**
-                 * @see javax.servlet.ServletOutputStream#setWriteListener(javax.servlet.WriteListener)
-                 */
-                @Override
-                public void setWriteListener(WriteListener writeListener) {
-                }
             };
         }
 
         /**
-         * @see javax.servlet.ServletResponseWrapper#getWriter()
+         * @see jakarta.servlet.ServletResponseWrapper#getWriter()
          */
         @Override
         public PrintWriter getWriter() throws IOException {
@@ -230,10 +231,11 @@ public class CmsJsonPartFilter implements Filter {
          * This method does nothing, we want to ignore calls to setContentLength because we want to postprocess
          * the output, resulting in a different length.
          *
-         * @see javax.servlet.ServletResponseWrapper#setContentLength(int)
+         * @see jakarta.servlet.ServletResponseWrapper#setContentLength(int)
          */
         @Override
         public void setContentLength(int len) {
+
             // ignore
         }
     }
@@ -263,14 +265,15 @@ public class CmsJsonPartFilter implements Filter {
     }
 
     /**
-     * @see javax.servlet.Filter#destroy()
+     * @see jakarta.servlet.Filter#destroy()
      */
     public void destroy() {
+
         // do nothing
     }
 
     /**
-     * @see javax.servlet.Filter#doFilter(javax.servlet.ServletRequest, javax.servlet.ServletResponse, javax.servlet.FilterChain)
+     * @see jakarta.servlet.Filter#doFilter(jakarta.servlet.ServletRequest, jakarta.servlet.ServletResponse, jakarta.servlet.FilterChain)
      */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
     throws IOException, ServletException {
@@ -300,9 +303,10 @@ public class CmsJsonPartFilter implements Filter {
     }
 
     /**
-     * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
+     * @see jakarta.servlet.Filter#init(jakarta.servlet.FilterConfig)
      */
     public void init(FilterConfig filterConfig) {
+
         // do nothing
     }
 

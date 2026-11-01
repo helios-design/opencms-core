@@ -48,13 +48,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * This the main servlet of the OpenCms system.<p>
@@ -310,7 +310,7 @@ public class OpenCmsServlet extends HttpServlet implements I_CmsRequestHandler {
     /**
      * OpenCms servlet main request handling method.<p>
      *
-     * @see javax.servlet.http.HttpServlet#doGet(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
+     * @see jakarta.servlet.http.HttpServlet#doGet(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse)
      */
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException, ServletException {
@@ -373,7 +373,7 @@ public class OpenCmsServlet extends HttpServlet implements I_CmsRequestHandler {
      * OpenCms servlet POST request handling method,
      * will just call {@link #doGet(HttpServletRequest, HttpServletResponse)}.<p>
      *
-     * @see javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
+     * @see jakarta.servlet.http.HttpServlet#doPost(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse)
      */
     @Override
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException, ServletException {
@@ -426,8 +426,12 @@ public class OpenCmsServlet extends HttpServlet implements I_CmsRequestHandler {
                     try {
                         // generate a static export request wrapper
                         CmsStaticExportRequest exportReq = new CmsStaticExportRequest(req, exportData);
-                        // export the resource and set the response status according to the result
-                        res.setStatus(OpenCms.getStaticExportManager().export(exportReq, res, cms, exportData));
+                        // stored content and registered scaled images can bypass the generic static export setup
+                        if (!OpenCms.getStaticExportManager().tryExportStoredContent(exportReq, res, cms, exportData)
+                            && !OpenCms.getStaticExportManager().tryExportImageCache(exportReq, res, cms, exportData)) {
+                            // export the resource and set the response status according to the result
+                            res.setStatus(OpenCms.getStaticExportManager().export(exportReq, res, cms, exportData));
+                        }
                     } catch (Throwable t) {
                         if (LOG.isWarnEnabled()) {
                             LOG.warn(Messages.get().getBundle().key(Messages.LOG_ERROR_EXPORT_1, exportData), t);
@@ -444,7 +448,7 @@ public class OpenCmsServlet extends HttpServlet implements I_CmsRequestHandler {
     }
 
     /**
-     * @see javax.servlet.Servlet#init(javax.servlet.ServletConfig)
+     * @see jakarta.servlet.Servlet#init(jakarta.servlet.ServletConfig)
      */
     @Override
     public synchronized void init(ServletConfig config) throws ServletException {

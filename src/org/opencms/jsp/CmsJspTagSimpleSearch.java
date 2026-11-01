@@ -67,9 +67,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.jsp.JspException;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.jsp.JspException;
 
 /**
  * This tag is used to easily create a search form for a Solr search within a JSP.<p>
@@ -99,7 +99,7 @@ public class CmsJspTagSimpleSearch extends CmsJspScopedVarBodyTagSuport implemen
 
     /** The search index that should be used .
      *  It will either be the configured index, or "Solr Offline" / "Solr Online" depending on the project.
-     * */
+     */
     private CmsSolrIndex m_index;
 
     /** Search controller keeping all the config and state from the search. */
@@ -160,7 +160,7 @@ public class CmsJspTagSimpleSearch extends CmsJspScopedVarBodyTagSuport implemen
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.BodyTagSupport#doEndTag()
+     * @see jakarta.servlet.jsp.tagext.BodyTagSupport#doEndTag()
      */
     @Override
     public int doEndTag() throws JspException {
@@ -170,7 +170,7 @@ public class CmsJspTagSimpleSearch extends CmsJspScopedVarBodyTagSuport implemen
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() throws JspException, CmsIllegalArgumentException {
@@ -327,7 +327,7 @@ public class CmsJspTagSimpleSearch extends CmsJspScopedVarBodyTagSuport implemen
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#release()
+     * @see jakarta.servlet.jsp.tagext.Tag#release()
      */
     @Override
     public void release() {

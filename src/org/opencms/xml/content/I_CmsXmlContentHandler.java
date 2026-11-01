@@ -57,9 +57,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import javax.servlet.ServletRequest;
-
 import org.dom4j.Element;
+
+import jakarta.servlet.ServletRequest;
 
 /**
  * Handles special XML content livetime events, and also provides XML content editor rendering hints.<p>
@@ -195,10 +195,18 @@ public interface I_CmsXmlContentHandler {
      *
      * <p>This is meant to provide metadata about a field for tools that process the content (e.g. translation).
      *
-     * @param the path of a content field
+     * @param remainingPath path of a content field
      * @return the set of agent tags
      */
     public Set<String> getAgentTags(String remainingPath);
+
+    /**
+     * Gets the configured placeholder for the given path.
+     *
+     * @param path the element path
+     * @return the placeholder (may contain macros)
+     */
+    public String getPlaceholder(String path);
 
     /**
      * Writes an availability date back to the content, if a mapping is defined for it.

@@ -50,11 +50,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * A list that displays the document types of a request parameter given
@@ -356,9 +356,10 @@ public class CmsDocumentTypeList extends A_CmsEmbeddedListDialog {
 
         // test the needed parameters
         if (getParamIndexsource() == null) {
-            throw new CmsIllegalStateException(Messages.get().container(
-                Messages.ERR_SEARCHINDEX_EDIT_MISSING_PARAM_1,
-                A_CmsEditIndexSourceDialog.PARAM_INDEXSOURCE));
+            throw new CmsIllegalStateException(
+                Messages.get().container(
+                    Messages.ERR_SEARCHINDEX_EDIT_MISSING_PARAM_1,
+                    A_CmsEditIndexSourceDialog.PARAM_INDEXSOURCE));
         }
     }
 

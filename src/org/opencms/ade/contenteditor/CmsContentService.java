@@ -144,9 +144,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-
 import org.apache.commons.logging.Log;
 
 import org.dom4j.Element;
@@ -155,6 +152,9 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Sets;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * Service to provide entity persistence within OpenCms. <p>
@@ -166,10 +166,13 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
      */
     protected class ContentAugmentationJob {
 
-        private volatile Throwable m_exception;
+        /** The content augmentation used. */
+        private I_CmsXmlContentAugmentation m_augmentation;
 
-        /** The job state. */
-        private volatile AugmentationJobState m_state = AugmentationJobState.running;
+        /** The context supplied to the content augmentation job. */
+        private I_CmsXmlContentAugmentation.Context m_context;
+
+        private volatile Throwable m_exception;
 
         /** The job id. */
         private CmsUUID m_id = new CmsUUID();
@@ -180,25 +183,22 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
         /** The locale to switch to. */
         private volatile Locale m_nextLocale;
 
-        /** The results of the content augmentation. */
-        private volatile CmsXmlContent m_result;
-
-        /** The progress message to display. */
-        private volatile String m_progress;
-
-        /** The context supplied to the content augmentation job. */
-        private I_CmsXmlContentAugmentation.Context m_context;
-
-        /** The structure id of the content being augmented. */
-        private CmsUUID m_structureId;
-
-        /** The content augmentation used. */
-        private I_CmsXmlContentAugmentation m_augmentation;
-
         /**
          * The original copy of the XML content object.
          */
         private CmsXmlContent m_originalCopy;
+
+        /** The progress message to display. */
+        private volatile String m_progress;
+
+        /** The results of the content augmentation. */
+        private volatile CmsXmlContent m_result;
+
+        /** The job state. */
+        private volatile AugmentationJobState m_state = AugmentationJobState.running;
+
+        /** The structure id of the content being augmented. */
+        private CmsUUID m_structureId;
 
         /**
          * Creates a new instance.
@@ -397,8 +397,10 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
      * The state of a content augmentation job.
      */
     enum AugmentationJobState {
-        running, done, aborted;
+        aborted, done, running;
     }
+
+    public static final String ATTR_AUGMENTATION_JOBS = "augmentationJobs";
 
     /** Request context attribute to mark a writeFile() triggered by the user saving in the content editor. */
     public static final String ATTR_EDITOR_SAVING = "__EDITOR_SAVING";
@@ -408,6 +410,8 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
 
     /** The type name prefix. */
     static final String TYPE_NAME_PREFIX = "http://opencms.org/types/";
+
+    private static ExecutorService m_augmentationThreadPool = Executors.newCachedThreadPool();
 
     /** The RDFA attributes string. */
     private static final String RDFA_ATTRIBUTES = CmsGwtConstants.ATTR_DATA_ID
@@ -433,8 +437,6 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
     /** Mapping client widget names to server side widget classes. */
     private static final Map<String, Class<? extends I_CmsADEWidget>> WIDGET_MAPPINGS = new HashMap<>();
 
-    public static final String ATTR_AUGMENTATION_JOBS = "augmentationJobs";
-
     static {
         WIDGET_MAPPINGS.put("string", CmsInputWidget.class);
         WIDGET_MAPPINGS.put("select", CmsSelectWidget.class);
@@ -448,8 +450,6 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
         WIDGET_MAPPINGS.put("radio", CmsRadioSelectWidget.class);
         WIDGET_MAPPINGS.put("groupselection", CmsGroupWidget.class);
     }
-
-    private static ExecutorService m_augmentationThreadPool = Executors.newCachedThreadPool();
 
     static {
         OpenCms.registerShutdownAction(() -> {
@@ -1350,7 +1350,17 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
     }
 
     /**
-     * @see org.opencms.ade.contenteditor.shared.rpc.I_CmsContentService#synchronizeAndTransform(java.lang.String, java.lang.String, org.opencms.acacia.shared.CmsEntity, java.util.List, java.util.Collection)
+     * Synchronizes and transforms the edited content.<p>
+     *
+     * @param entityId the entity id
+     * @param clientId the client id
+     * @param editedEntity the edited entity
+     * @param deletedEntities the deleted entities
+     * @param skipPaths the paths to skip
+     *
+     * @return the content augmentation details
+     *
+     * @throws CmsRpcException if something goes wrong
      */
     public CmsContentAugmentationDetails synchronizeAndTransform(
         String entityId,
@@ -2066,6 +2076,7 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
                 null,
                 null,
                 null,
+                null,
                 DisplayType.none.name(),
                 false,
                 false,
@@ -2091,6 +2102,7 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
                     getWidgetName(prop.getWidget()),
                     getWidgetConfig(prop.getWidget(), prop.getWidgetConfiguration(), messages, contentLocale),
                     prop.getDefault(),
+                    prop.getPlaceholder(),
                     DisplayType.singleline.name(),
                     visible,
                     false,
@@ -2105,6 +2117,7 @@ public class CmsContentService extends CmsGwtService implements I_CmsContentServ
                     new CmsAttributeConfiguration(
                         formatter.getNiceName(m_workplaceLocale),
                         "",
+                        null,
                         null,
                         null,
                         null,

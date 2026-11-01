@@ -67,12 +67,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.collections.Factory;
 import org.apache.commons.logging.Log;
 
 import com.google.common.base.Function;
+
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Resolves macros in the form of <code>%(key)</code> or <code>${key}</code> in an input String.<p>
@@ -388,7 +388,7 @@ public class CmsMacroResolver implements I_CmsMacroResolver {
      * @param resourceBundle property resource
      * @param descriptor resource
      * @param clonedCms cms instance
-     * @return Map <key, [value, descriptor]>
+     * @return Map &lt;key, [value, descriptor]&gt;
      * @throws CmsXmlException exception
      * @throws CmsException exception
      */

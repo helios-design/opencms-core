@@ -85,17 +85,17 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.tagext.BodyContent;
-import javax.servlet.jsp.tagext.BodyTagSupport;
-import javax.servlet.jsp.tagext.TryCatchFinally;
-
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.tagext.BodyContent;
+import jakarta.servlet.jsp.tagext.BodyTagSupport;
+import jakarta.servlet.jsp.tagext.TryCatchFinally;
 
 /**
  * Provides access to the page container elements.<p>
@@ -165,7 +165,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
     /**
      * The container name prefix to use for nested container names.
      * If empty the element instance id of the parent element will be used.
-     **/
+     */
     private String m_namePrefix;
 
     /** The optional container parameter. */
@@ -443,7 +443,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.BodyTagSupport#doAfterBody()
+     * @see jakarta.servlet.jsp.tagext.BodyTagSupport#doAfterBody()
      */
     @SuppressWarnings("resource")
     @Override
@@ -463,7 +463,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.TryCatchFinally#doCatch(java.lang.Throwable)
+     * @see jakarta.servlet.jsp.tagext.TryCatchFinally#doCatch(java.lang.Throwable)
      */
     public void doCatch(Throwable t) throws Throwable {
 
@@ -471,7 +471,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.TagSupport#doEndTag()
+     * @see jakarta.servlet.jsp.tagext.TagSupport#doEndTag()
      */
     @Override
     public int doEndTag() throws JspException {
@@ -640,7 +640,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
                 if (LOG.isErrorEnabled()) {
                     LOG.error(Messages.get().getBundle().key(Messages.ERR_PROCESS_TAG_1, "container"), ex);
                 }
-                throw new javax.servlet.jsp.JspException(ex);
+                throw new jakarta.servlet.jsp.JspException(ex);
             }
         }
 
@@ -649,7 +649,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.TryCatchFinally#doFinally()
+     * @see jakarta.servlet.jsp.tagext.TryCatchFinally#doFinally()
      */
     public void doFinally() {
 
@@ -664,7 +664,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
      *
      * @return EVAL_BODY_BUFFERED
      *
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() {
@@ -1482,6 +1482,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
             }
             // wrapping the elements with DIV containing initial element data. To be removed by the container-page editor
             printElementWrapperTagStart(cms, element, standardContext.getPage(), true);
+            OpenCms.getElementMarker().addStartMarker(pageContext, element, null);
             for (CmsContainerElementBean subelement : subElements) {
 
                 try {
@@ -1527,6 +1528,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
                     // execute the formatter JSP for the given element URI
                     // wrapping the elements with DIV containing initial element data. To be removed by the container-page editor
                     printElementWrapperTagStart(cms, subelement, standardContext.getPage(), false);
+                    OpenCms.getElementMarker().addStartMarker(pageContext, subelement, subElementFormatterConfig);
                     standardContext.setElement(subelement);
                     try {
                         String formatterSitePath;
@@ -1574,6 +1576,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
                         }
                         printElementErrorTag(subelement.getSitePath(), subElementFormatterConfig.getJspRootPath(), e);
                     }
+                    OpenCms.getElementMarker().addEndMarker(pageContext, subelement);
                     printElementWrapperTagEnd(false);
                 } catch (Exception e) {
                     if (LOG.isErrorEnabled()) {
@@ -1581,6 +1584,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
                     }
                 }
             }
+            OpenCms.getElementMarker().addEndMarker(pageContext, element);
             printElementWrapperTagEnd(true);
             return true;
         } else {
@@ -1635,6 +1639,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
                 }
 
                 printElementWrapperTagStart(cms, element, standardContext.getPage(), false);
+                OpenCms.getElementMarker().addStartMarker(pageContext, element, formatterConfig);
                 standardContext.setElement(element);
                 try {
                     if (!showInContext) {
@@ -1680,6 +1685,7 @@ public class CmsJspTagContainer extends BodyTagSupport implements TryCatchFinall
                     }
                     printElementErrorTag(element.getSitePath(), formatter, e);
                 }
+                OpenCms.getElementMarker().addEndMarker(pageContext, element);
                 printElementWrapperTagEnd(false);
             }
             return result;

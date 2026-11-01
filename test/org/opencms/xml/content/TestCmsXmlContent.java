@@ -29,7 +29,7 @@ package org.opencms.xml.content;
 
 import org.opencms.i18n.CmsEncoder;
 import org.opencms.main.CmsLog;
-import org.opencms.test.OpenCmsTestCase;
+import org.opencms.test.OpenCmsTestRunner;
 import org.opencms.util.CmsFileUtil;
 import org.opencms.xml.CmsXmlContentDefinition;
 import org.opencms.xml.CmsXmlEntityResolver;
@@ -40,15 +40,23 @@ import org.opencms.xml.types.CmsXmlLocaleValue;
 import org.opencms.xml.types.CmsXmlStringValue;
 import org.opencms.xml.types.I_CmsXmlContentValue;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 import org.apache.commons.logging.Log;
+
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 /**
  * Tests for generating an XML content.<p>
  *
  */
-public class TestCmsXmlContent extends OpenCmsTestCase {
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class TestCmsXmlContent extends OpenCmsTestRunner {
 
     /** The log object for this class. */
     private static final Log LOG = CmsLog.getLog(TestCmsXmlContent.class);
@@ -57,20 +65,12 @@ public class TestCmsXmlContent extends OpenCmsTestCase {
     private static final String SCHEMA_SYSTEM_ID_1 = "http://www.opencms.org/test1.xsd";
 
     /**
-     * Default JUnit constructor.<p>
-     *
-     * @param arg0 JUnit parameters
-     */
-    public TestCmsXmlContent(String arg0) {
-
-        super(arg0);
-    }
-
-    /**
      * Test that reading a schema containing ampersands in the appinfo section doesn't cause errors.
      *
      * @throws Exception in case something goes wrong
      */
+    @Test
+    @Order(1)
     public void testAppInfoWithSpecialChars() throws Exception {
 
         CmsXmlEntityResolver resolver = new CmsXmlEntityResolver(null);
@@ -87,10 +87,40 @@ public class TestCmsXmlContent extends OpenCmsTestCase {
     }
 
     /**
+     * Tests that {@link CmsXmlContent#getNames(Locale)} returns element paths in
+     * the order they appear in the XML document.<p>
+     *
+     * @throws Exception in case the test fails
+     */
+    @Test
+    @Order(5)
+    public void testGetNamesReturnsDocumentOrder() throws Exception {
+
+        CmsXmlEntityResolver resolver = new CmsXmlEntityResolver(null);
+
+        String content = CmsFileUtil.readFile(
+            "org/opencms/xml/content/xmlcontent-definition-1.xsd",
+            CmsEncoder.ENCODING_UTF_8);
+        CmsXmlContentDefinition definition = CmsXmlContentDefinition.unmarshal(content, SCHEMA_SYSTEM_ID_1, resolver);
+        CmsXmlEntityResolver.cacheSystemId(
+            SCHEMA_SYSTEM_ID_1,
+            definition.getSchema().asXML().getBytes(CmsEncoder.ENCODING_UTF_8));
+
+        content = CmsFileUtil.readFile("org/opencms/xml/content/xmlcontent-1.xml", CmsEncoder.ENCODING_UTF_8);
+        CmsXmlContent xmlcontent = CmsXmlContentFactory.unmarshal(content, CmsEncoder.ENCODING_UTF_8, resolver);
+
+        // document order in xmlcontent-1.xml is: String, DateTime, Html, Locale
+        List<String> expected = Arrays.asList("String[1]", "DateTime[1]", "Html[1]", "Locale[1]");
+        assertEquals(expected, xmlcontent.getNames(Locale.ENGLISH));
+    }
+
+    /**
      * Tests moving elements up and down in the XML content.<p>
      *
      * @throws Exception in case the test fails
      */
+    @Test
+    @Order(4)
     public void testMoveUpDown() throws Exception {
 
         CmsXmlEntityResolver resolver = new CmsXmlEntityResolver(null);
@@ -163,6 +193,8 @@ public class TestCmsXmlContent extends OpenCmsTestCase {
      *
      * @throws Exception in case something goes wrong
      */
+    @Test
+    @Order(3)
     public void testUnmarshalFromString() throws Exception {
 
         CmsXmlEntityResolver resolver = new CmsXmlEntityResolver(null);
@@ -204,6 +236,8 @@ public class TestCmsXmlContent extends OpenCmsTestCase {
      *
      * @throws Exception in case something goes wrong
      */
+    @Test
+    @Order(2)
     public void testUnmarshalXsdWithInvalidNestedSchema() throws Exception {
 
         CmsXmlEntityResolver resolver = new CmsXmlEntityResolver(null);

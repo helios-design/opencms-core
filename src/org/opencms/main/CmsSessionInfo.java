@@ -63,6 +63,9 @@ public class CmsSessionInfo implements Comparable<CmsSessionInfo>, Serializable 
     /** The broadcast queue buffer for the user of this session info. */
     private transient Buffer m_broadcastQueue;
 
+    /** The optional label of the client this session was created for. */
+    private String m_clientLabel;
+
     /** The maximum time, in seconds, this session info is allowed to be inactive. */
     private int m_maxInactiveInterval;
 
@@ -103,6 +106,7 @@ public class CmsSessionInfo implements Comparable<CmsSessionInfo>, Serializable 
         m_sessionId = sessionId;
         m_maxInactiveInterval = maxInactiveInterval;
         m_userId = context.getCurrentUser().getId();
+        m_clientLabel = (String)context.getAttribute(CmsRequestContext.ATTRIBUTE_CLIENT_LABEL);
         update(context);
     }
 
@@ -186,6 +190,17 @@ public class CmsSessionInfo implements Comparable<CmsSessionInfo>, Serializable 
     }
 
     /**
+     * Returns the optional label of the client this session was created for, taken once at session
+     * creation from the {@link CmsRequestContext#ATTRIBUTE_CLIENT_LABEL} context attribute.<p>
+     *
+     * @return the client label, or <code>null</code> for a session created without one
+     */
+    public String getClientLabel() {
+
+        return m_clientLabel;
+    }
+
+    /**
      * Returns the maximum time, in seconds, this session info is allowed to be inactive.<p>
      *
      * The inactive time is the time since the last call to the {@link #update(CmsRequestContext)}
@@ -194,7 +209,7 @@ public class CmsSessionInfo implements Comparable<CmsSessionInfo>, Serializable 
      *
      * @return the maximum time, in seconds, this session info is allowed to be inactive
      *
-     * @see javax.servlet.http.HttpSession#getMaxInactiveInterval()
+     * @see jakarta.servlet.http.HttpSession#getMaxInactiveInterval()
      */
     public int getMaxInactiveInterval() {
 
@@ -226,7 +241,7 @@ public class CmsSessionInfo implements Comparable<CmsSessionInfo>, Serializable 
      *
      * @return the id of the OpenCms (http) session this session info belongs to
      *
-     * @see javax.servlet.http.HttpSession#getId()
+     * @see jakarta.servlet.http.HttpSession#getId()
      */
     public CmsUUID getSessionId() {
 

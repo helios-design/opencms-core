@@ -36,9 +36,9 @@ import org.opencms.gwt.shared.CmsCoreData;
 import org.opencms.util.CmsStringUtil;
 import org.opencms.workplace.CmsWorkplace;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Action element class used by the upload hook JSP from the org.opencms.ade.postupload module.<p>
@@ -93,10 +93,11 @@ public class CmsPostUploadDialogActionElement extends CmsGwtActionElement {
         StringBuffer sb = new StringBuffer();
         sb.append(super.export());
         sb.append(exportCloseLink());
-        sb.append(exportDictionary(
-            CmsPostUploadDialogBean.DICT_NAME,
-            I_CmsPostUploadDialogService.class.getMethod("prefetch"),
-            getDialogData()));
+        sb.append(
+            exportDictionary(
+                CmsPostUploadDialogBean.DICT_NAME,
+                I_CmsPostUploadDialogService.class.getMethod("prefetch"),
+                getDialogData()));
         sb.append(exportModuleScriptTag(GWT_MODULE_NAME));
         return sb.toString();
     }

@@ -39,7 +39,6 @@ import org.opencms.loader.I_CmsResourceStringDumpLoader;
 import org.opencms.main.CmsException;
 import org.opencms.main.OpenCms;
 import org.opencms.staticexport.CmsLinkManager;
-import org.opencms.util.CmsCollectionsGenericWrapper;
 import org.opencms.util.CmsRequestUtil;
 import org.opencms.util.CmsStringUtil;
 import org.opencms.workplace.editors.directedit.CmsDirectEditParams;
@@ -50,16 +49,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-import javax.servlet.jsp.tagext.BodyTagSupport;
-
 import com.google.common.collect.Maps;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
+import jakarta.servlet.jsp.tagext.BodyTagSupport;
 
 /**
  * Implementation of the <code>&lt;cms:include/&gt;</code> tag,
@@ -224,7 +223,9 @@ public class CmsJspTagInclude extends BodyTagSupport implements I_CmsJspTagParam
             && CmsJspTagEditable.startDirectEdit(context, new CmsDirectEditParams(target, element));
 
         // save old parameters from request
-        Map<String, String[]> oldParameterMap = CmsCollectionsGenericWrapper.map(req.getParameterMap());
+        // read them from the request the finally block below restores them to, since a request wrapper
+        // added by the servlet container does not necessarily report the parameters of the flex request
+        Map<String, String[]> oldParameterMap = controller.getCurrentRequest().getParameterMap();
         try {
             // each include will have it's unique map of parameters
             Map<String, String[]> parameterMap = (paramMap == null)
@@ -338,8 +339,9 @@ public class CmsJspTagInclude extends BodyTagSupport implements I_CmsJspTagParam
                 String encoding;
                 if (loader instanceof CmsJspLoader) {
                     // in case of JSPs use the response encoding
-                    if (res instanceof CmsFlexResponse) {
-                        encoding = ((CmsFlexResponse)res).getEncoding();
+                    CmsFlexResponse flexRes = CmsRequestUtil.getFlexResponse(res);
+                    if (flexRes != null) {
+                        encoding = flexRes.getEncoding();
                     } else {
                         encoding = res.getCharacterEncoding();
                     }
@@ -456,7 +458,7 @@ public class CmsJspTagInclude extends BodyTagSupport implements I_CmsJspTagParam
     /**
      * @return <code>EVAL_PAGE</code>
      *
-     * @see javax.servlet.jsp.tagext.Tag#doEndTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doEndTag()
      *
      * @throws JspException by interface default
      */
@@ -540,7 +542,7 @@ public class CmsJspTagInclude extends BodyTagSupport implements I_CmsJspTagParam
      *
      * @return <code>{@link #EVAL_BODY_BUFFERED}</code>
      *
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() {
@@ -630,7 +632,7 @@ public class CmsJspTagInclude extends BodyTagSupport implements I_CmsJspTagParam
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#release()
+     * @see jakarta.servlet.jsp.tagext.Tag#release()
      */
     @Override
     public void release() {

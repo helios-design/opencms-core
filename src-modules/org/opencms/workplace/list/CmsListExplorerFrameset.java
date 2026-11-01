@@ -52,13 +52,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspWriter;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspWriter;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Explorer dialog for the project files view.<p>
@@ -121,16 +121,12 @@ public class CmsListExplorerFrameset extends CmsExplorerDialog {
         html.append("\t\t<meta HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=\"").append(
             getEncoding()).append("\">\n");
         String uplink = "/opencms_a/opencms/system/workplace/views/admin/admin-main.jsp?path=/projects/files&action=initial&projectid=fa9f561f-be30-11e2-bac3-21ebf444feef&showexplorer=true";
-        html.append(
-            "<script >var uplink = \""
-                + CmsStringUtil.escapeJavaScript(uplink)
-                + "\";</script>\n");
+        html.append("<script >var uplink = \"" + CmsStringUtil.escapeJavaScript(uplink) + "\";</script>\n");
         html.append("\t\t<title>\n");
-        html.append(
-            "\t\t\t").append(
-                key(
-                    org.opencms.workplace.Messages.GUI_LABEL_WPTITLE_1,
-                    new Object[] {getSettings().getUser().getFullName()})).append("\n");
+        html.append("\t\t\t").append(
+            key(
+                org.opencms.workplace.Messages.GUI_LABEL_WPTITLE_1,
+                new Object[] {getSettings().getUser().getFullName()})).append("\n");
         html.append("\t\t</title>\n");
         html.append("\t</head>\n");
         html.append("\t<frameset rows='57,*' border='0' frameborder='0' framespacing='0'>\n");
@@ -205,28 +201,30 @@ public class CmsListExplorerFrameset extends CmsExplorerDialog {
         }
         // list view button
         CmsMessages messages = Messages.get().getBundle(getLocale());
-        html.append(A_CmsHtmlIconButton.defaultButtonHtml(
-            CmsHtmlIconButtonStyleEnum.SMALL_ICON_TEXT,
-            "id-list-switch",
-            messages.key(Messages.GUI_LIST_ACTION_LIST_SWITCH_NAME_0),
-            messages.key(Messages.GUI_LIST_ACTION_LIST_SWITCH_HELP_0),
-            true,
-            "list/list.png",
-            null,
-            "openPage('" + listLevelLink + "');"));
+        html.append(
+            A_CmsHtmlIconButton.defaultButtonHtml(
+                CmsHtmlIconButtonStyleEnum.SMALL_ICON_TEXT,
+                "id-list-switch",
+                messages.key(Messages.GUI_LIST_ACTION_LIST_SWITCH_NAME_0),
+                messages.key(Messages.GUI_LIST_ACTION_LIST_SWITCH_HELP_0),
+                true,
+                "list/list.png",
+                null,
+                "openPage('" + listLevelLink + "');"));
         html.append("\n");
         // uplevel button only if needed
         if (!toolPath.equals(getParentPath())) {
-            html.append(A_CmsHtmlIconButton.defaultButtonHtml(
-                CmsHtmlIconButtonStyleEnum.SMALL_ICON_TEXT,
-                "id-up-level",
-                org.opencms.workplace.tools.Messages.get().getBundle(getLocale()).key(
-                    org.opencms.workplace.tools.Messages.GUI_ADMIN_VIEW_UPLEVEL_0),
-                parentName,
-                true,
-                "admin/images/up.png",
-                null,
-                "openPage('" + upLevelLink + "');"));
+            html.append(
+                A_CmsHtmlIconButton.defaultButtonHtml(
+                    CmsHtmlIconButtonStyleEnum.SMALL_ICON_TEXT,
+                    "id-up-level",
+                    org.opencms.workplace.tools.Messages.get().getBundle(getLocale()).key(
+                        org.opencms.workplace.tools.Messages.GUI_ADMIN_VIEW_UPLEVEL_0),
+                    parentName,
+                    true,
+                    "admin/images/up.png",
+                    null,
+                    "openPage('" + upLevelLink + "');"));
         }
         html.append("</form>");
         html.append("\n\t\t\t</td>\n");
@@ -315,7 +313,7 @@ public class CmsListExplorerFrameset extends CmsExplorerDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsDialog#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsDialog#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

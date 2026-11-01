@@ -135,8 +135,6 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
-import javax.servlet.ServletRequest;
-
 import org.apache.commons.logging.Log;
 
 import org.antlr.stringtemplate.StringTemplate;
@@ -152,6 +150,8 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+
+import jakarta.servlet.ServletRequest;
 
 /**
  * Default implementation for the XML content handler, will be used by all XML contents that do not
@@ -251,6 +251,9 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
 
         /** Element name. */
         Params,
+
+        /** Element name. */
+        Placeholder,
 
         /** Element name. */
         Relation,
@@ -733,6 +736,9 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
     /** The principal list separator. */
     private static final String PRINCIPAL_LIST_SEPARATOR = ",";
 
+    /** String template group for the simple search setting expansions. */
+    private static final StringTemplateGroup SEARCH_TEMPLATE_GROUP = initSearchTemplateGroup();
+
     /** The title property individual mapping key. */
     private static final String TITLE_PROPERTY_INDIVIDUAL_MAPPING = MAPTO_PROPERTY_INDIVIDUAL
         + CmsPropertyDefinition.PROPERTY_TITLE;
@@ -777,9 +783,6 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
         }
         CmsXmlEntityResolver.cacheSystemId(APPINFO_SCHEMA_SYSTEM_ID, appinfoSchema);
     }
-
-    /** The configured agent tags for fields. */
-    private Map<String, Set<String>> m_agentTags = new HashMap<>();
 
     /** The set of allowed templates. */
     protected CmsDefaultSet<String> m_allowedTemplates = new CmsDefaultSet<String>();
@@ -841,9 +844,6 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
     /** The search settings. */
     protected Map<String, CmsSearchContentConfig> m_searchSettings;
 
-    /** String template group for the simple search setting expansions. */
-    protected StringTemplateGroup m_searchTemplateGroup;
-
     /** The configured settings for the formatters (as defined in the annotations). */
     protected Map<String, CmsXmlContentProperty> m_settings;
 
@@ -873,6 +873,9 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
 
     /** Path to XSL transform in VFS to use for version transformation. */
     protected String m_versionTransformation;
+
+    /** The configured agent tags for fields. */
+    private Map<String, Set<String>> m_agentTags = new HashMap<>();
 
     /** Change handler configurations. */
     private List<CmsChangeHandlerConfig> m_changeHandlerConfigs = new ArrayList<>();
@@ -934,6 +937,9 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
     /** The parameters. */
     private CmsParameterConfiguration m_parameters = new CmsParameterConfiguration();
 
+    /** Map of placeholder strings, with the keys being paths relative from the schema to which this content handler belongs. */
+    private Map<String, String> m_placeholders = new HashMap<>();
+
     /** Option to disable reverse mapping for this content type. */
     private boolean m_reverseMappingEnabled = true;
 
@@ -993,6 +999,23 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
             LOG.error(e.getLocalizedMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * Initializes the string template group for the simple search setting expansions.
+     *
+     * @return the string template group
+     */
+    private static StringTemplateGroup initSearchTemplateGroup() {
+
+        StringTemplateGroup result = null;
+        try (
+        InputStream stream = CmsDefaultXmlContentHandler.class.getResourceAsStream("simple-searchsetting-configs.st")) {
+            result = CmsStringUtil.readStringTemplateGroup(stream);
+        } catch (IOException e) {
+            LOG.error(e.getLocalizedMessage(), e);
+        }
+        return result;
     }
 
     /**
@@ -1598,7 +1621,7 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
     }
 
     /**
-     * @see org.opencms.xml.content.I_CmsXmlContentHandler#getNestedFormatters(org.opencms.file.CmsObject, org.opencms.file.CmsResource, java.util.Locale, javax.servlet.ServletRequest)
+     * @see org.opencms.xml.content.I_CmsXmlContentHandler#getNestedFormatters(org.opencms.file.CmsObject, org.opencms.file.CmsResource, java.util.Locale, jakarta.servlet.ServletRequest)
      */
     public List<String> getNestedFormatters(CmsObject cms, CmsResource res, Locale locale, ServletRequest req) {
 
@@ -1664,6 +1687,14 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
     public CmsParameterConfiguration getParameters() {
 
         return m_parameters;
+    }
+
+    /**
+     * @see org.opencms.xml.content.I_CmsXmlContentHandler#getPlaceholder(java.lang.String)
+     */
+    public String getPlaceholder(String name) {
+
+        return m_placeholders.get(name);
     }
 
     /**
@@ -2774,7 +2805,7 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
                 m_primaryGeomappingField = name;
                 m_searchSettings.put(CmsXmlUtils.removeXpath(name), I_CmsXmlContentValue.CmsSearchContentConfig.FALSE);
             } else {
-                StringTemplate template = m_searchTemplateGroup.getInstanceOf(value);
+                StringTemplate template = SEARCH_TEMPLATE_GROUP.getInstanceOf(value);
                 if ((template != null) && (template.getFormalArgument("name") != null)) {
                     template.setAttribute("name", CmsEncoder.escapeXml(name));
                     String xml = template.toString();
@@ -3090,12 +3121,6 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
         m_displayTypes = new HashMap<String, DisplayType>();
         m_editorChangeHandlers = new ArrayList<I_CmsXmlContentEditorChangeHandler>();
         m_nestedFormatterElements = new HashSet<String>();
-        try (
-        InputStream stream = CmsDefaultXmlContentHandler.class.getResourceAsStream("simple-searchsetting-configs.st")) {
-            m_searchTemplateGroup = CmsStringUtil.readStringTemplateGroup(stream);
-        } catch (IOException e) {
-            LOG.error(e.getLocalizedMessage(), e);
-        }
     }
 
     /**
@@ -3346,6 +3371,10 @@ public class CmsDefaultXmlContentHandler implements I_CmsXmlContentHandler, I_Cm
                 }
             }
             m_agentTags.put(name, Collections.unmodifiableSet(agentTags));
+        }
+        String placeholder = elem.elementTextTrim(FieldSettingElems.Placeholder.name());
+        if (!CmsStringUtil.isEmptyOrWhitespaceOnly(placeholder)) {
+            m_placeholders.put(name, placeholder);
         }
 
     }

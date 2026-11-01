@@ -56,6 +56,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -257,8 +258,8 @@ public class CmsXmlPage extends A_CmsXmlDocument {
                     e);
             } catch (IOException e) {
                 throw new CmsRuntimeException(
-                        Messages.get().container(Messages.ERR_XML_PAGE_UNMARSHAL_CONTENDDEF_0),
-                        e);
+                    Messages.get().container(Messages.ERR_XML_PAGE_UNMARSHAL_CONTENDDEF_0),
+                    e);
             }
         }
         return m_xmlPageContentDefinition;
@@ -467,7 +468,7 @@ public class CmsXmlPage extends A_CmsXmlDocument {
         m_encoding = CmsEncoder.lookupEncoding(encoding, encoding);
         m_document = document;
         m_elementLocales = new HashMap<String, Set<Locale>>();
-        m_elementNames = new HashMap<Locale, Set<String>>();
+        m_elementNames = new HashMap<Locale, LinkedHashSet<String>>();
         m_locales = new HashSet<Locale>();
 
         // convert pre 5.3.6 XML page documents

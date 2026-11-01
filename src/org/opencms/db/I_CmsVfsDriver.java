@@ -27,6 +27,7 @@
 
 package org.opencms.db;
 
+import org.opencms.db.storage.I_CmsStorageDelivery;
 import org.opencms.db.urlname.CmsUrlNameMappingEntry;
 import org.opencms.db.urlname.CmsUrlNameMappingFilter;
 import org.opencms.file.CmsDataAccessException;
@@ -36,6 +37,8 @@ import org.opencms.file.CmsProject;
 import org.opencms.file.CmsProperty;
 import org.opencms.file.CmsPropertyDefinition;
 import org.opencms.file.CmsResource;
+import org.opencms.file.CmsStoredContentInfo;
+import org.opencms.file.I_CmsFileContentStreamHandler;
 import org.opencms.file.quota.CmsFolderSizeEntry;
 import org.opencms.file.quota.CmsFolderSizeOptions;
 import org.opencms.relations.CmsRelation;
@@ -43,6 +46,8 @@ import org.opencms.relations.CmsRelationFilter;
 import org.opencms.security.CmsOrganizationalUnit;
 import org.opencms.util.CmsUUID;
 
+import java.io.ByteArrayInputStream;
+import java.io.OutputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -90,40 +95,45 @@ public interface I_CmsVfsDriver {
     int countSiblings(CmsDbContext dbc, CmsUUID projectId, CmsUUID resourceId) throws CmsDataAccessException;
 
     /**
-     * Creates a content entry for the resource identified by the specified resource id.<p>
+     * Creates a content entry for the specified resource.<p>
      *
      * @param dbc the current database context
      * @param projectId the id of the current project
-     * @param resourceId the resource id of the resource to create the content for
+     * @param resource the resource to create the content for
      * @param content the content to write
      *
      * @throws CmsDataAccessException if something goes wrong
      */
-    void createContent(CmsDbContext dbc, CmsUUID projectId, CmsUUID resourceId, byte[] content)
+    void createContent(CmsDbContext dbc, CmsUUID projectId, CmsResource resource, byte[] content)
     throws CmsDataAccessException;
 
     /**
      * Creates a {@link CmsFile} instance from a JDBC ResultSet.<p>
      *
+     * @param dbc the current database context
      * @param res the JDBC ResultSet
      * @param projectId the project id
      *
      * @return the created file
+     * @throws CmsDataAccessException if something goes wrong
      * @throws SQLException in case the result set does not include a requested table attribute
      */
-    CmsFile createFile(ResultSet res, CmsUUID projectId) throws SQLException;
+    CmsFile createFile(CmsDbContext dbc, ResultSet res, CmsUUID projectId) throws CmsDataAccessException, SQLException;
 
     /**
      * Creates a {@link CmsFile} instance from a JDBC ResultSet.<p>
      *
+     * @param dbc the current database context
      * @param res the JDBC ResultSet
      * @param projectId the project id
      * @param hasFileContentInResultSet flag to include the file content
      *
      * @return the created file
+     * @throws CmsDataAccessException if something goes wrong
      * @throws SQLException in case the result set does not include a requested table attribute
      */
-    CmsFile createFile(ResultSet res, CmsUUID projectId, boolean hasFileContentInResultSet) throws SQLException;
+    CmsFile createFile(CmsDbContext dbc, ResultSet res, CmsUUID projectId, boolean hasFileContentInResultSet)
+    throws CmsDataAccessException, SQLException;
 
     /**
      * Creates a {@link CmsFolder} instance from a JDBC ResultSet.<p>
@@ -202,7 +212,7 @@ public interface I_CmsVfsDriver {
      * @throws CmsDataAccessException if something goes wrong
      *
      * @see org.opencms.file.types.I_CmsResourceType#createResource(org.opencms.file.CmsObject, CmsSecurityManager, String, byte[], List)
-     * @see org.opencms.file.types.I_CmsResourceType#importResource(org.opencms.file.CmsObject, CmsSecurityManager, String, CmsResource, byte[], List)
+     * @see org.opencms.file.types.I_CmsResourceType#importResource(org.opencms.file.CmsObject, CmsSecurityManager, org.opencms.report.I_CmsReport, String, CmsResource, byte[], List)
      * @see org.opencms.file.CmsObject#createResource(String, int, byte[], List)
      * @see org.opencms.file.CmsObject#importResource(String, CmsResource, byte[], List)
      */
@@ -239,6 +249,17 @@ public interface I_CmsVfsDriver {
      * @throws CmsDataAccessException if something goes wrong
      */
     void deleteAliases(CmsDbContext dbc, CmsProject project, CmsAliasFilter filter) throws CmsDataAccessException;
+
+    /**
+     * Deletes historical content entries for a resource older than the given publish tag.<p>
+     *
+     * @param dbc the current database context
+     * @param resourceId the id of the resource
+     * @param publishTagToKeep the minimal publish tag to keep
+     *
+     * @throws CmsDataAccessException if something goes wrong
+     */
+    void deleteHistoryContent(CmsDbContext dbc, CmsUUID resourceId, int publishTagToKeep) throws CmsDataAccessException;
 
     /**
      * Deletes a property definition.<p>
@@ -332,6 +353,22 @@ public interface I_CmsVfsDriver {
      * @return the SqlManager of this driver
      */
     CmsSqlManager getSqlManager();
+
+    /**
+     * Returns a delivery-capable storage backend by its stable storage identifier.<p>
+     *
+     * @param dbc the current database context
+     * @param storage the stable storage identifier
+     *
+     * @return the delivery-capable storage backend, or <code>null</code> if not supported by the VFS driver
+     *
+     * @throws CmsDataAccessException if something goes wrong
+     */
+    default I_CmsStorageDelivery getStoredContentDelivery(CmsDbContext dbc, String storage)
+    throws CmsDataAccessException {
+
+        return null;
+    }
 
     /**
      * Gets the current value of a counter, creates it if it doesn't already exist, and increments it.<p>
@@ -471,6 +508,64 @@ public interface I_CmsVfsDriver {
     byte[] readContent(CmsDbContext dbc, CmsUUID projectId, CmsUUID resourceId) throws CmsDataAccessException;
 
     /**
+     * Reads the content of a file specified by it's resource ID and passes it to an input stream handler.<p>
+     *
+     * @param dbc the current database context
+     * @param projectId the ID of the current project
+     * @param resourceId the id of the resource
+     * @param handler the stream handler
+     *
+     * @throws CmsDataAccessException if something goes wrong
+     */
+    default void readContentFrom(
+        CmsDbContext dbc,
+        CmsUUID projectId,
+        CmsUUID resourceId,
+        I_CmsFileContentStreamHandler handler)
+    throws CmsDataAccessException {
+
+        byte[] content = readContent(dbc, projectId, resourceId);
+        if (content == null) {
+            return;
+        }
+        try (ByteArrayInputStream in = new ByteArrayInputStream(content)) {
+            handler.read(in);
+        } catch (Exception e) {
+            throw new CmsDataAccessException(
+                Messages.get().container(
+                    Messages.ERR_READ_CONTENT_WITH_RESOURCE_ID_2,
+                    resourceId,
+                    Boolean.valueOf(projectId.equals(CmsProject.ONLINE_PROJECT_ID))),
+                e);
+        }
+    }
+
+    /**
+     * Reads the content of a file specified by it's resource ID and writes it to an output stream.<p>
+     *
+     * @param dbc the current database context
+     * @param projectId the ID of the current project
+     * @param resourceId the id of the resource
+     * @param out the output stream to write to
+     *
+     * @throws CmsDataAccessException if something goes wrong
+     */
+    default void readContentTo(CmsDbContext dbc, CmsUUID projectId, CmsUUID resourceId, OutputStream out)
+    throws CmsDataAccessException {
+
+        try {
+            out.write(readContent(dbc, projectId, resourceId));
+        } catch (Exception e) {
+            throw new CmsDataAccessException(
+                Messages.get().container(
+                    Messages.ERR_READ_CONTENT_WITH_RESOURCE_ID_2,
+                    resourceId,
+                    Boolean.valueOf(projectId.equals(CmsProject.ONLINE_PROJECT_ID))),
+                e);
+        }
+    }
+
+    /**
      * Reads a folder specified by it's structure ID.<p>
      *
      * @param dbc the current database context
@@ -508,6 +603,19 @@ public interface I_CmsVfsDriver {
      */
     List<CmsFolderSizeEntry> readFolderSizeStats(CmsDbContext dbc, boolean online, CmsFolderSizeOptions options)
     throws CmsDataAccessException;
+
+    /**
+     * Reads the historical content of a file specified by its resource ID and publish tag.<p>
+     *
+     * @param dbc the current database context
+     * @param resourceId the id of the resource
+     * @param publishTag the publish tag of the historical content
+     *
+     * @return the historical file content
+     *
+     * @throws CmsDataAccessException if something goes wrong
+     */
+    byte[] readHistoryContent(CmsDbContext dbc, CmsUUID resourceId, int publishTag) throws CmsDataAccessException;
 
     /**
      * Reads the parent folder of a resource specified by it's structure ID.<p>
@@ -653,7 +761,7 @@ public interface I_CmsVfsDriver {
      * @param dbc the current database context
      * @param project the to read the entries from
      * @param principalId the id of the principal
-    
+     *
      * @return a list of <code>{@link org.opencms.file.CmsResource}</code> objects
      *
      * @throws CmsDataAccessException if something goes wrong
@@ -672,7 +780,7 @@ public interface I_CmsVfsDriver {
      * @param dbc the current database context
      * @param project the to read the entries from
      * @param principalId the id of the principal
-    
+     *
      * @return a list of <code>{@link org.opencms.file.CmsResource}</code> objects
      *
      * @throws CmsDataAccessException if something goes wrong
@@ -783,6 +891,23 @@ public interface I_CmsVfsDriver {
      */
     List<CmsResource> readSiblings(CmsDbContext dbc, CmsUUID projectId, CmsResource resource, boolean includeDeleted)
     throws CmsDataAccessException;
+
+    /**
+     * Reads information about where the content for a file resource is stored without loading the content bytes.<p>
+     *
+     * @param dbc the current database context
+     * @param projectId the ID of the current project
+     * @param resource the resource
+     *
+     * @return the stored content info
+     *
+     * @throws CmsDataAccessException if something goes wrong
+     */
+    default CmsStoredContentInfo readStoredContentInfo(CmsDbContext dbc, CmsUUID projectId, CmsResource resource)
+    throws CmsDataAccessException {
+
+        return new CmsStoredContentInfo(resource, null, null, resource.getLength());
+    }
 
     /**
      * Reads the URL name mapping entries which match a given filter.<p>
@@ -926,15 +1051,15 @@ public interface I_CmsVfsDriver {
     throws CmsDataAccessException;
 
     /**
-     * Writes the resource content with the specified resource id.<p>
+     * Writes the resource content for the specified resource.<p>
      *
      * @param dbc the current database context
-     * @param resourceId the id of the resource used to identify the content to update
+     * @param resource the resource used to identify the content to update
      * @param content the new content of the file
      *
      * @throws CmsDataAccessException if something goes wrong
      */
-    void writeContent(CmsDbContext dbc, CmsUUID resourceId, byte[] content) throws CmsDataAccessException;
+    void writeContent(CmsDbContext dbc, CmsResource resource, byte[] content) throws CmsDataAccessException;
 
     /**
      * Writes the "last-modified-in-project" ID of a resource.<p>

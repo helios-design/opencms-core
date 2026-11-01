@@ -53,12 +53,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Widget dialog that collects the options for the property view.
@@ -290,22 +290,24 @@ public class CmsPropertyviewDialog extends CmsWidgetDialog {
 
         setKeyPrefix(KEY_PREFIX);
 
-        addWidget(new CmsWidgetDialogParameter(
-            m_settings,
-            "message",
-            key(Messages.GUI_MODULES_DETAIL_DIALOG_MESSAGE_0),
-            PAGES[0],
-            new CmsDisplayWidget(),
-            1,
-            1));
-        addWidget(new CmsWidgetDialogParameter(
-            m_settings,
-            "paths",
-            "/",
-            PAGES[0],
-            new CmsVfsFileWidget(false, getCms().getRequestContext().getSiteRoot()),
-            1,
-            CmsWidgetDialogParameter.MAX_OCCURENCES));
+        addWidget(
+            new CmsWidgetDialogParameter(
+                m_settings,
+                "message",
+                key(Messages.GUI_MODULES_DETAIL_DIALOG_MESSAGE_0),
+                PAGES[0],
+                new CmsDisplayWidget(),
+                1,
+                1));
+        addWidget(
+            new CmsWidgetDialogParameter(
+                m_settings,
+                "paths",
+                "/",
+                PAGES[0],
+                new CmsVfsFileWidget(false, getCms().getRequestContext().getSiteRoot()),
+                1,
+                CmsWidgetDialogParameter.MAX_OCCURENCES));
         addWidget(
             new CmsWidgetDialogParameter(
                 m_settings,
@@ -315,14 +317,15 @@ public class CmsPropertyviewDialog extends CmsWidgetDialog {
                 new CmsSelectWidget(getPropertySelectWidgetConfiguration()),
                 1,
                 CmsWidgetDialogParameter.MAX_OCCURENCES));
-        addWidget(new CmsWidgetDialogParameter(
-            m_settings,
-            "showSiblings",
-            String.valueOf(false),
-            PAGES[0],
-            new CmsCheckboxWidget(),
-            1,
-            1));
+        addWidget(
+            new CmsWidgetDialogParameter(
+                m_settings,
+                "showSiblings",
+                String.valueOf(false),
+                PAGES[0],
+                new CmsCheckboxWidget(),
+                1,
+                1));
         addWidget(new CmsWidgetDialogParameter(m_settings, "propValue", PAGES[0], new CmsInputWidget()));
     }
 
@@ -349,7 +352,7 @@ public class CmsPropertyviewDialog extends CmsWidgetDialog {
 
     /**
      * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings,
-     *      javax.servlet.http.HttpServletRequest)
+     *      jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(final CmsWorkplaceSettings settings, final HttpServletRequest request) {

@@ -53,15 +53,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileItemFactory;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItem;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.jakarta.servlet5.JakartaServletDiskFileUpload;
 
 import com.google.common.collect.Sets;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Helper class used by a service to edit or import aliases for a whole site.<p>
@@ -93,14 +92,14 @@ public class CmsAliasBulkEditHelper {
      */
     public void importAliases(HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        FileItemFactory factory = new DiskFileItemFactory();
-        ServletFileUpload upload = new ServletFileUpload(factory);
+        DiskFileItemFactory factory = DiskFileItemFactory.builder().get();
+        JakartaServletDiskFileUpload upload = new JakartaServletDiskFileUpload(factory);
         @SuppressWarnings("unchecked")
-        List<FileItem> items = upload.parseRequest(request);
+        List<DiskFileItem> items = upload.parseRequest(request);
         byte[] data = null;
         String siteRoot = null;
         String separator = ",";
-        for (FileItem fileItem : items) {
+        for (DiskFileItem fileItem : items) {
             String name = fileItem.getFieldName();
             if (PARAM_IMPORTFILE.equals(name)) {
                 data = fileItem.get();

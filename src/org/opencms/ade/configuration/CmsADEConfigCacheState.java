@@ -28,6 +28,7 @@
 package org.opencms.ade.configuration;
 
 import org.opencms.ade.configuration.CmsADEConfigData.DetailInfo;
+import org.opencms.ade.configuration.CmsADEConfigDataInternal.AttributeValue;
 import org.opencms.ade.configuration.CmsADEConfigDataInternal.ConfigReference;
 import org.opencms.ade.configuration.CmsADEConfigDataInternal.ConfigReferenceInstance;
 import org.opencms.ade.configuration.CmsADEConfigDataInternal.ConfigReferenceMeta;
@@ -40,17 +41,19 @@ import org.opencms.file.types.CmsResourceTypeXmlContainerPage;
 import org.opencms.main.CmsException;
 import org.opencms.main.CmsLog;
 import org.opencms.main.OpenCms;
+import org.opencms.util.CmsFileUtil;
 import org.opencms.util.CmsStringUtil;
 import org.opencms.util.CmsUUID;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -58,9 +61,13 @@ import org.apache.commons.logging.Log;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 
 /**
  * An immutable object which represents the complete ADE configuration (sitemap and module configurations)
@@ -90,7 +97,7 @@ public class CmsADEConfigCacheState {
     private Map<CmsUUID, CmsElementView> m_elementViews;
 
     /** The cached content types for folders. */
-    private Map<String, String> m_folderTypes = new HashMap<String, String>();
+    private SetMultimap<String, String> m_folderTypes = HashMultimap.create();
 
     /** The merged configuration from all the modules. */
     private CmsADEConfigDataInternal m_moduleConfiguration;
@@ -110,8 +117,10 @@ public class CmsADEConfigCacheState {
     /** Site plugins. */
     private Map<CmsUUID, CmsSitePlugin> m_sitePlugins;
 
-    /** Cache for sitemap attribute overview maps. */
-    private ConcurrentHashMap<String, Map<String, String>> m_attributeValuesByPathCache = new ConcurrentHashMap<>();
+    /** Cache for attribute overview maps - keys are attribute names, values are maps from paths to attribute values. */
+    private Cache<String, Map<String, String>> m_attributeValuesByPathCache = CacheBuilder.newBuilder().expireAfterWrite(
+        3,
+        TimeUnit.SECONDS).concurrencyLevel(2).build();
 
     /** Cached list of subsites to be included in the site selector. */
     private volatile List<String> m_subsitesForSiteSelector;
@@ -151,7 +160,7 @@ public class CmsADEConfigCacheState {
         try {
             m_folderTypes = computeFolderTypes();
         } catch (Exception e) {
-            m_folderTypes = Maps.newHashMap();
+            m_folderTypes = HashMultimap.create();
             LOG.error(e.getLocalizedMessage(), e);
         }
         CacheBuilder<?, ?> detailPageCacheBuilder = CacheBuilder.newBuilder().concurrencyLevel(8).expireAfterWrite(
@@ -186,9 +195,9 @@ public class CmsADEConfigCacheState {
      *
      * @throws CmsException if something goes wrong
      */
-    public Map<String, String> computeFolderTypes() throws CmsException {
+    public SetMultimap<String, String> computeFolderTypes() throws CmsException {
 
-        Map<String, String> folderTypes = Maps.newHashMap();
+        HashMultimap<String, String> folderTypes = HashMultimap.create();
         // do this first, since folder types from modules should be overwritten by folder types from sitemaps
         if (m_moduleConfiguration != null) {
             folderTypes.putAll(wrap(m_moduleConfiguration).getFolderTypes());
@@ -283,17 +292,23 @@ public class CmsADEConfigCacheState {
      */
     public Map<String, String> getAttributeValuesByPath(String attribute) {
 
-        return m_attributeValuesByPathCache.computeIfAbsent(attribute, attr -> {
-            Map<String, String> result = new HashMap<>();
-            for (String path : m_siteConfigurationsByPath.keySet()) {
-                CmsADEConfigData config = lookupConfiguration(path);
-                String value = config.getAttribute(attr, null);
-                if (value != null) {
-                    result.put(path, value);
+        try {
+            return m_attributeValuesByPathCache.get(attribute, () -> {
+                Map<String, String> result = new HashMap<>();
+                for (String path : m_siteConfigurationsByPath.keySet()) {
+                    CmsADEConfigData config = lookupConfiguration(path);
+                    String value = config.getAttribute(attribute, null);
+                    if (value != null) {
+                        result.put(path, value);
+                    }
                 }
-            }
-            return Collections.unmodifiableMap(result);
-        });
+                return Collections.unmodifiableMap(result);
+            });
+        } catch (ExecutionException e) {
+            // shouldn't happen
+            LOG.error(e.getLocalizedMessage(), e);
+            return Collections.emptyMap();
+        }
     }
 
     /**
@@ -370,26 +385,56 @@ public class CmsADEConfigCacheState {
      *
      * @return the map of folder types
      */
-    public Map<String, String> getFolderTypes() {
+    public SetMultimap<String, String> getFolderTypes() {
 
-        return Collections.unmodifiableMap(m_folderTypes);
+        return Multimaps.unmodifiableSetMultimap(m_folderTypes);
     }
 
     /**
-     * Helper method to retrieve the parent folder type or <code>null</code> if none available.<p>
+     * Reads attributes defined for each requested website or subsite, including its master configurations and connectors.<p>
      *
-     * @param rootPath the path of a resource
-     * @return the parent folder content type
+     * Attributes from parent websites or subsites and module configurations are not included.<p>
+     *
+     * @param paths the website and subsite root paths
+     * @param extraInfo the connector snapshots, in ascending priority order
+     *
+     * @return local attribute maps, including empty maps for websites or subsites without settings
      */
-    public String getParentFolderType(String rootPath) {
+    public Map<String, Map<String, AttributeValue>> getLocalAttributesByPath(
+        Collection<String> paths,
+        List<I_CmsSitemapExtraInfo> extraInfo) {
+
+        Map<String, Map<String, AttributeValue>> result = new HashMap<>();
+        for (String path : paths) {
+            String normalizedPath = CmsFileUtil.addTrailingSeparator(path);
+            Map<String, AttributeValue> attributes = new HashMap<>();
+            CmsADEConfigDataInternal config = m_siteConfigurationsByPath.get(normalizedPath);
+            if (config != null) {
+                List<ConfigReferenceInstance> sequence = new ArrayList<>();
+                fillMasterConfigurations(sequence, new ConfigReferenceInstance(config), new HashSet<>());
+                for (ConfigReferenceInstance reference : sequence) {
+                    attributes.putAll(reference.getConfig().getAttributes());
+                }
+            }
+            for (I_CmsSitemapExtraInfo info : extraInfo) {
+                Map<String, AttributeValue> injected = info.getAttributes(normalizedPath);
+                if (injected != null) {
+                    attributes.putAll(injected);
+                }
+            }
+            result.put(normalizedPath, Collections.unmodifiableMap(attributes));
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public Set<String> getParentFolderTypes(String rootPath) {
 
         String parent = CmsResource.getParentFolder(rootPath);
         if (parent == null) {
-            return null;
+            return Collections.emptySet();
         }
-        String type = m_folderTypes.get(parent);
-        // type may be null
-        return type;
+        return getFolderTypes().get(parent);
+
     }
 
     /**
@@ -439,6 +484,21 @@ public class CmsADEConfigCacheState {
             m_subsitesForSiteSelector = Collections.unmodifiableList(paths);
         }
         return m_subsitesForSiteSelector;
+    }
+
+    /**
+     * Helper method to retrieve the parent folder type or <code>null</code> if none available.<p>
+     *
+     * @param rootPath the path of a resource
+     * @return the parent folder content type
+     */
+    public boolean hasParentFolderType(String rootPath) {
+
+        String parent = CmsResource.getParentFolder(rootPath);
+        if (parent == null) {
+            return false;
+        }
+        return m_folderTypes.containsKey(parent);
     }
 
     /**

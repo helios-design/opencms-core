@@ -46,13 +46,13 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.tagext.TagSupport;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.tagext.TagSupport;
 
 /**
  * Implementation of the <code>&lt;cms:usertracking/&gt;</code> tag.<p>
@@ -139,7 +139,8 @@ public class CmsJspTagUserTracking extends TagSupport {
         String userName,
         boolean includeGroups,
         String groupName,
-        HttpServletRequest req) throws JspException {
+        HttpServletRequest req)
+    throws JspException {
 
         String result = "";
 
@@ -278,7 +279,8 @@ public class CmsJspTagUserTracking extends TagSupport {
         boolean subFolder,
         CmsUser user,
         List<CmsGroup> groups,
-        HttpServletRequest req) throws CmsException {
+        HttpServletRequest req)
+    throws CmsException {
 
         CmsResource checkResource = cms.readResource(fileName);
 
@@ -319,7 +321,8 @@ public class CmsJspTagUserTracking extends TagSupport {
         String fileName,
         boolean subFolder,
         CmsUser user,
-        HttpServletRequest req) throws CmsException {
+        HttpServletRequest req)
+    throws CmsException {
 
         CmsResource checkResource = cms.readResource(fileName);
 
@@ -363,7 +366,7 @@ public class CmsJspTagUserTracking extends TagSupport {
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#doStartTag()
+     * @see jakarta.servlet.jsp.tagext.Tag#doStartTag()
      */
     @Override
     public int doStartTag() throws JspException {
@@ -481,7 +484,7 @@ public class CmsJspTagUserTracking extends TagSupport {
     }
 
     /**
-     * @see javax.servlet.jsp.tagext.Tag#release()
+     * @see jakarta.servlet.jsp.tagext.Tag#release()
      */
     @Override
     public void release() {

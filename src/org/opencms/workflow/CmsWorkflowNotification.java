@@ -39,7 +39,7 @@ import org.opencms.util.CmsStringUtil;
 
 import java.util.List;
 
-import org.apache.commons.mail.EmailException;
+import org.apache.commons.mail2.core.EmailException;
 
 /**
  * Notification class for the workflow 'release' action.<p>
@@ -86,7 +86,7 @@ public class CmsWorkflowNotification extends A_CmsNotification {
         CmsProject project,
         List<CmsResource> resources,
         String link)
-        throws EmailException {
+    throws EmailException {
 
         super(userCms, receiver);
         m_notificationContent = notificationContent;

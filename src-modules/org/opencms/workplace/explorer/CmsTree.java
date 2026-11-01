@@ -54,9 +54,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Generates the tree view for the OpenCms Workplace.<p>
@@ -377,9 +377,10 @@ public class CmsTree extends CmsWorkplace {
                     // no (valid) start folder given, just load current folder
                     try {
                         if (includeFiles()) {
-                            resources.addAll(getCms().getResourcesInFolder(
-                                currentTargetFolder,
-                                CmsResourceFilter.ONLY_VISIBLE_NO_DELETED));
+                            resources.addAll(
+                                getCms().getResourcesInFolder(
+                                    currentTargetFolder,
+                                    CmsResourceFilter.ONLY_VISIBLE_NO_DELETED));
                         } else {
                             resources.addAll(
                                 getCms().getSubFolders(currentTargetFolder, CmsResourceFilter.ONLY_VISIBLE_NO_DELETED));
@@ -404,9 +405,10 @@ public class CmsTree extends CmsWorkplace {
                         while (tok.hasMoreTokens()) {
                             startFolder += tok.nextToken() + "/";
                             if (includeFiles()) {
-                                resources.addAll(getCms().getResourcesInFolder(
-                                    startFolder,
-                                    CmsResourceFilter.ONLY_VISIBLE_NO_DELETED));
+                                resources.addAll(
+                                    getCms().getResourcesInFolder(
+                                        startFolder,
+                                        CmsResourceFilter.ONLY_VISIBLE_NO_DELETED));
                             } else {
                                 resources.addAll(
                                     getCms().getSubFolders(startFolder, CmsResourceFilter.ONLY_VISIBLE_NO_DELETED));
@@ -580,7 +582,7 @@ public class CmsTree extends CmsWorkplace {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

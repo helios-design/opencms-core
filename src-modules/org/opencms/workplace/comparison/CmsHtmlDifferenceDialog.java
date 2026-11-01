@@ -35,10 +35,10 @@ import org.opencms.util.CmsHtml2TextConverter;
 import org.opencms.util.CmsStringUtil;
 import org.opencms.workplace.CmsWorkplaceSettings;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspWriter;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspWriter;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides a GUI for the file comparison dialog.<p>
@@ -141,8 +141,9 @@ public class CmsHtmlDifferenceDialog extends CmsDifferenceDialog {
                             getLocale()));
                 } else if (getMode() == CmsDiffViewMode.ALL) {
                     // print original source, if there are no differences
-                    out.println(wrapLinesWithUnchangedStyle(
-                        CmsStringUtil.substitute(CmsStringUtil.escapeHtml(originalSource), "<br/>", "")));
+                    out.println(
+                        wrapLinesWithUnchangedStyle(
+                            CmsStringUtil.substitute(CmsStringUtil.escapeHtml(originalSource), "<br/>", "")));
                 }
             }
         } catch (Exception e) {
@@ -157,7 +158,7 @@ public class CmsHtmlDifferenceDialog extends CmsDifferenceDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

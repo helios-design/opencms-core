@@ -38,9 +38,13 @@ import org.opencms.repository.CmsRepositoryFilter;
 import org.opencms.repository.CmsRepositoryManager;
 import org.opencms.repository.I_CmsRepository;
 import org.opencms.security.I_CmsPrincipal;
+import org.opencms.staticexport.A_CmsOnDemandStaticExportHandler;
+import org.opencms.staticexport.CmsSharedCacheConfiguration;
+import org.opencms.staticexport.CmsSharedCachePolicy;
 import org.opencms.staticexport.CmsStaticExportExportRule;
 import org.opencms.staticexport.CmsStaticExportManager;
 import org.opencms.staticexport.CmsStaticExportRfsRule;
+import org.opencms.staticexport.CmsStoredContentDeliveryConfiguration;
 import org.opencms.util.CmsResourceTranslator;
 import org.opencms.util.CmsStringUtil;
 
@@ -208,6 +212,21 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     /**  The node name of the separator node. */
     public static final String N_SEPARATOR = "separator";
 
+    /** The node name of the shared cache configuration. */
+    public static final String N_SHAREDCACHE = "sharedcache";
+
+    /** The node name of a shared cache policy. */
+    public static final String N_SHAREDCACHE_CACHEPOLICY = "cachepolicy";
+
+    /** The node name of the shared cache client maximum age. */
+    public static final String N_SHAREDCACHE_CLIENTMAXAGE = "clientmaxage";
+
+    /** The node name of the shared cache shared maximum age. */
+    public static final String N_SHAREDCACHE_SHAREDMAXAGE = "sharedmaxage";
+
+    /** The node name of the shared cache stale-if-error duration. */
+    public static final String N_SHAREDCACHE_STALEIFERROR = "staleiferror";
+
     /**  The main configuration node for static export name. */
     public static final String N_STATICEXPORT = "staticexport";
 
@@ -310,6 +329,12 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     /**  The node name of the static export vfx-prefix node. */
     public static final String N_STATICEXPORT_VFS_PREFIX = "vfs-prefix";
 
+    /** The node name of the stored content delivery configuration. */
+    public static final String N_STOREDCONTENTDELIVERY = "storedcontentdelivery";
+
+    /** The node name of the stored content delivery enabled suffixes list. */
+    public static final String N_STOREDCONTENTDELIVERY_ENABLEDSUFFIXES = "enabledsuffixes";
+
     /** The temporary export point path node. */
     public static final String N_TEMP_EXPORTPONT_PATH = "temp-exportpoint-path";
 
@@ -328,8 +353,14 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     /** The configured repository manager. */
     private CmsRepositoryManager m_repositoryManager;
 
+    /** The shared cache configuration. */
+    private CmsSharedCacheConfiguration m_sharedCacheConfiguration = new CmsSharedCacheConfiguration();
+
     /** The configured static export manager. */
     private CmsStaticExportManager m_staticExportManager;
+
+    /** The stored content delivery configuration. */
+    private CmsStoredContentDeliveryConfiguration m_storedContentDeliveryConfiguration = new CmsStoredContentDeliveryConfiguration();
 
     /**
      * Adds an protected export point.<p>
@@ -622,6 +653,46 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
             "addRfsRuleSystemRes",
             1);
         digester.addCallParam(rfsRulePath + "/" + N_STATICEXPORT_RELATED_SYSTEM_RES + "/" + N_STATICEXPORT_REGEX, 0);
+
+        // creation of the stored content delivery configuration
+        digester.addObjectCreate("*/" + N_STOREDCONTENTDELIVERY, CmsStoredContentDeliveryConfiguration.class);
+        digester.addSetNext("*/" + N_STOREDCONTENTDELIVERY, "setStoredContentDeliveryConfiguration");
+        digester.addCallMethod("*/" + N_STOREDCONTENTDELIVERY, "setEnabled", 1);
+        digester.addCallParam("*/" + N_STOREDCONTENTDELIVERY, 0, A_ENABLED);
+        // stored content delivery suffix rule
+        digester.addCallMethod(
+            "*/"
+                + N_STOREDCONTENTDELIVERY
+                + "/"
+                + N_STOREDCONTENTDELIVERY_ENABLEDSUFFIXES
+                + "/"
+                + N_STATICEXPORT_SUFFIX,
+            "addEnabledSuffix",
+            1);
+        digester.addCallParam(
+            "*/"
+                + N_STOREDCONTENTDELIVERY
+                + "/"
+                + N_STOREDCONTENTDELIVERY_ENABLEDSUFFIXES
+                + "/"
+                + N_STATICEXPORT_SUFFIX,
+            0,
+            A_KEY);
+
+        // creation of the shared cache configuration
+        digester.addObjectCreate("*/" + N_SHAREDCACHE, CmsSharedCacheConfiguration.class);
+        digester.addSetNext("*/" + N_SHAREDCACHE, "setSharedCacheConfiguration");
+        digester.addCallMethod("*/" + N_SHAREDCACHE, "setEnabled", 1);
+        digester.addCallParam("*/" + N_SHAREDCACHE, 0, A_ENABLED);
+        // shared cache policy rules
+        String sharedCachePolicyPath = "*/" + N_SHAREDCACHE + "/" + N_SHAREDCACHE_CACHEPOLICY;
+        digester.addObjectCreate(sharedCachePolicyPath, CmsSharedCachePolicy.class);
+        digester.addSetNext(sharedCachePolicyPath, "addCachePolicy");
+        digester.addCallMethod(sharedCachePolicyPath, "setContentType", 1);
+        digester.addCallParam(sharedCachePolicyPath, 0, "contenttype");
+        digester.addCallMethod(sharedCachePolicyPath + "/" + N_SHAREDCACHE_CLIENTMAXAGE, "setClientMaxAge", 0);
+        digester.addCallMethod(sharedCachePolicyPath + "/" + N_SHAREDCACHE_SHAREDMAXAGE, "setSharedMaxAge", 0);
+        digester.addCallMethod(sharedCachePolicyPath + "/" + N_SHAREDCACHE_STALEIFERROR, "setStaleIfError", 0);
 
         // adds protected export rules
         digester.addCallMethod(
@@ -1082,6 +1153,45 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
 
         }
 
+        if (m_storedContentDeliveryConfiguration.isConfigured()) {
+            // <storedcontentdelivery> node
+            Element storedContentDeliveryElement = parent.addElement(N_STOREDCONTENTDELIVERY);
+            storedContentDeliveryElement.addAttribute(
+                A_ENABLED,
+                String.valueOf(m_storedContentDeliveryConfiguration.isEnabled()));
+
+            // <enabledsuffixes> node and its <suffix> sub nodes
+            if (m_storedContentDeliveryConfiguration.hasEnabledSuffixes()) {
+                Element enabledSuffixesElement = storedContentDeliveryElement.addElement(
+                    N_STOREDCONTENTDELIVERY_ENABLEDSUFFIXES);
+                Iterator<String> enabledSuffixes = m_storedContentDeliveryConfiguration.getEnabledSuffixes().iterator();
+                while (enabledSuffixes.hasNext()) {
+                    String suffix = enabledSuffixes.next();
+                    Element suffixElement = enabledSuffixesElement.addElement(N_STATICEXPORT_SUFFIX);
+                    suffixElement.addAttribute(A_KEY, suffix);
+                }
+            }
+
+        }
+
+        if (m_sharedCacheConfiguration.isConfigured()) {
+            // <sharedcache> node and its policies
+            Element sharedCacheElement = parent.addElement(N_SHAREDCACHE);
+            sharedCacheElement.addAttribute(A_ENABLED, String.valueOf(m_sharedCacheConfiguration.isEnabled()));
+            for (CmsSharedCachePolicy policy : m_sharedCacheConfiguration.getCachePolicies()) {
+                Element policyElement = sharedCacheElement.addElement(N_SHAREDCACHE_CACHEPOLICY);
+                if (!policy.isDefault()) {
+                    policyElement.addAttribute("contenttype", policy.getContentType());
+                }
+                policyElement.addElement(N_SHAREDCACHE_CLIENTMAXAGE).addText(String.valueOf(policy.getClientMaxAge()));
+                policyElement.addElement(N_SHAREDCACHE_SHAREDMAXAGE).addText(String.valueOf(policy.getSharedMaxAge()));
+                if (policy.getStaleIfError() != CmsSharedCachePolicy.DURATION_UNSET) {
+                    policyElement.addElement(N_SHAREDCACHE_STALEIFERROR).addText(
+                        String.valueOf(policy.getStaleIfError()));
+                }
+            }
+        }
+
         if (m_staticExportManager.getProtectedExportPath() != null) {
             Element streamingEl = parent.addElement(N_PROTECTED_EXPORT);
             streamingEl.addElement(N_STATICEXPORT_EXPORTPATH).setText(m_staticExportManager.getProtectedExportPath());
@@ -1251,6 +1361,16 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
+     * Returns the shared cache configuration.<p>
+     *
+     * @return the shared cache configuration
+     */
+    public CmsSharedCacheConfiguration getSharedCacheConfiguration() {
+
+        return m_sharedCacheConfiguration;
+    }
+
+    /**
      * Returns the initialized static export manager.<p>
      *
      * @return the initialized static export manager
@@ -1258,6 +1378,16 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     public CmsStaticExportManager getStaticExportManager() {
 
         return m_staticExportManager;
+    }
+
+    /**
+     * Returns the stored content delivery configuration.<p>
+     *
+     * @return the stored content delivery configuration
+     */
+    public CmsStoredContentDeliveryConfiguration getStoredContentDeliveryConfiguration() {
+
+        return m_storedContentDeliveryConfiguration;
     }
 
     /**
@@ -1314,6 +1444,19 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
+     * Sets the shared cache configuration.<p>
+     *
+     * @param configuration the shared cache configuration
+     */
+    public void setSharedCacheConfiguration(CmsSharedCacheConfiguration configuration) {
+
+        m_sharedCacheConfiguration = configuration;
+        if (CmsLog.INIT.isInfoEnabled()) {
+            CmsLog.INIT.info(Messages.get().getBundle().key(Messages.INIT_SHAREDCACHE_CONFIG_0));
+        }
+    }
+
+    /**
      * Sets the generated static export manager.<p>
      *
      * @param manager the static export manager to set
@@ -1327,6 +1470,19 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
+     * Sets the stored content delivery configuration.<p>
+     *
+     * @param configuration the stored content delivery configuration
+     */
+    public void setStoredContentDeliveryConfiguration(CmsStoredContentDeliveryConfiguration configuration) {
+
+        m_storedContentDeliveryConfiguration = configuration;
+        if (CmsLog.INIT.isInfoEnabled()) {
+            CmsLog.INIT.info(Messages.get().getBundle().key(Messages.INIT_STOREDCONTENTDELIVERY_CONFIG_0));
+        }
+    }
+
+    /**
      * Sets the user settings for export and import.<p>
      *
      * @param userExportSettings the user settings for export and import
@@ -1334,6 +1490,41 @@ public class CmsImportExportConfiguration extends A_CmsXmlConfiguration {
     public void setUserExportSettings(CmsUserExportSettings userExportSettings) {
 
         m_importExportManager.setUserExportSettings(userExportSettings);
+    }
+
+    /**
+     * Validates configuration combinations which can not be expressed in the DTD.<p>
+     *
+     * @throws CmsConfigurationException if the configuration is invalid
+     */
+    public void validate() throws CmsConfigurationException {
+
+        m_sharedCacheConfiguration.validate();
+        if (!m_sharedCacheConfiguration.isEnabled()) {
+            return;
+        }
+        if (m_storedContentDeliveryConfiguration.isEnabled()) {
+            throw new CmsConfigurationException(
+                Messages.get().container(Messages.ERR_SHAREDCACHE_CONFLICT_STOREDCONTENT_0));
+        }
+        if (!m_staticExportManager.isStaticExportEnabled()) {
+            throw new CmsConfigurationException(
+                Messages.get().container(Messages.ERR_SHAREDCACHE_STATICEXPORT_DISABLED_0));
+        }
+        if (!(m_staticExportManager.getHandler() instanceof A_CmsOnDemandStaticExportHandler)) {
+            throw new CmsConfigurationException(
+                Messages.get().container(
+                    Messages.ERR_SHAREDCACHE_HANDLER_1,
+                    m_staticExportManager.getHandler().getClass().getName()));
+        }
+        for (String header : m_staticExportManager.getExportHeaders()) {
+            int separator = header.indexOf(':');
+            String name = separator < 0 ? header : header.substring(0, separator);
+            if ("cache-control".equalsIgnoreCase(name.trim())) {
+                throw new CmsConfigurationException(
+                    Messages.get().container(Messages.ERR_SHAREDCACHE_CACHE_CONTROL_HEADER_0));
+            }
+        }
     }
 
     /**

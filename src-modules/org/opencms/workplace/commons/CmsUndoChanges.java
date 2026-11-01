@@ -44,12 +44,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides methods for the undo changes on a resource dialog.<p>
@@ -167,9 +167,10 @@ public class CmsUndoChanges extends CmsMultiDialog {
                 }
 
             } catch (CmsException e) {
-                LOG.error(Messages.get().getBundle(getLocale()).key(
-                    Messages.ERR_UNDO_CHANGES_1,
-                    new String[] {resourcePath}));
+                LOG.error(
+                    Messages.get().getBundle(getLocale()).key(
+                        Messages.ERR_UNDO_CHANGES_1,
+                        new String[] {resourcePath}));
             }
 
         }
@@ -235,14 +236,16 @@ public class CmsUndoChanges extends CmsMultiDialog {
         boolean isMoved = isOperationOnMovedResource();
         if (!isMultiOperation()) {
             result.append(dialogSpacer());
-            result.append(key(
-                Messages.GUI_UNDO_LASTMODIFIED_INFO_3,
-                new Object[] {getFileName(), getLastModifiedDate(), getLastModifiedUser()}));
+            result.append(
+                key(
+                    Messages.GUI_UNDO_LASTMODIFIED_INFO_3,
+                    new Object[] {getFileName(), getLastModifiedDate(), getLastModifiedUser()}));
             if (isMoved) {
                 result.append(dialogSpacer());
-                result.append(key(
-                    Messages.GUI_UNDO_MOVE_OPERATION_INFO_2,
-                    new Object[] {getFileName(), resourceOriginalPath(getCms(), getParamResource())}));
+                result.append(
+                    key(
+                        Messages.GUI_UNDO_MOVE_OPERATION_INFO_2,
+                        new Object[] {getFileName(), resourceOriginalPath(getCms(), getParamResource())}));
             }
         }
         result.append(dialogSpacer());
@@ -374,7 +377,7 @@ public class CmsUndoChanges extends CmsMultiDialog {
     }
 
     /**
-     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, javax.servlet.http.HttpServletRequest)
+     * @see org.opencms.workplace.CmsWorkplace#initWorkplaceRequestValues(org.opencms.workplace.CmsWorkplaceSettings, jakarta.servlet.http.HttpServletRequest)
      */
     @Override
     protected void initWorkplaceRequestValues(CmsWorkplaceSettings settings, HttpServletRequest request) {

@@ -37,9 +37,9 @@ import org.opencms.workplace.CmsWidgetDialogParameter;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  *
@@ -69,6 +69,29 @@ public class CmsEditMappingDialog extends A_CmsMappingDialog {
     public CmsEditMappingDialog(PageContext context, HttpServletRequest req, HttpServletResponse res) {
 
         super(context, req, res);
+    }
+
+    /**
+     * Returns the String value of the mapping type.<p>
+     *
+     * @return String value of the mapping type
+     */
+    public String getType() {
+
+        if ((m_mapping != null) && (m_mapping.getType() != null)) {
+            return m_mapping.getType().toString();
+        }
+        return "";
+    }
+
+    /**
+     * Sets the mapping type of the mapping.<p>
+     *
+     * @param type String value of the mapping type
+     */
+    public void setType(String type) {
+
+        m_mapping.setType(type);
     }
 
     /**
@@ -115,29 +138,6 @@ public class CmsEditMappingDialog extends A_CmsMappingDialog {
             new CmsWidgetDialogParameter(this, "type", PAGES[0], new CmsSelectWidget(getTypeWidgetConfiguration())));
         addWidget(new CmsWidgetDialogParameter(m_mapping, "param", "", PAGES[0], new CmsInputWidget(), 0, 1));
         addWidget(new CmsWidgetDialogParameter(m_mapping, "defaultValue", "", PAGES[0], new CmsInputWidget(), 0, 1));
-    }
-
-    /**
-     * Sets the mapping type of the mapping.<p>
-     *
-     * @param type String value of the mapping type
-     */
-    public void setType(String type) {
-
-        m_mapping.setType(type);
-    }
-
-    /**
-     * Returns the String value of the mapping type.<p>
-     *
-     * @return String value of the mapping type
-     */
-    public String getType() {
-
-        if ((m_mapping != null) && (m_mapping.getType() != null)) {
-            return m_mapping.getType().toString();
-        }
-        return "";
     }
 
     /**

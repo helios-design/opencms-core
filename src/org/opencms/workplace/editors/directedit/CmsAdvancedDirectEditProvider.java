@@ -39,6 +39,8 @@ import org.opencms.file.types.CmsResourceTypePlain;
 import org.opencms.file.types.CmsResourceTypeXmlContent;
 import org.opencms.file.types.CmsResourceTypeXmlPage;
 import org.opencms.file.types.I_CmsResourceType;
+import org.opencms.gwt.CmsVfsService;
+import org.opencms.gwt.shared.CmsAvailabilityInfo;
 import org.opencms.gwt.shared.CmsGwtConstants;
 import org.opencms.gwt.shared.I_CmsAutoBeanFactory;
 import org.opencms.gwt.shared.I_CmsContentLoadCollectorInfo;
@@ -64,14 +66,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
-
 import org.apache.commons.logging.Log;
 
 import com.google.web.bindery.autobean.shared.AutoBean;
 import com.google.web.bindery.autobean.shared.AutoBeanCodex;
 import com.google.web.bindery.autobean.vm.AutoBeanFactorySource;
+
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provider for the OpenCms AdvancedDirectEdit.<p>
@@ -203,7 +205,7 @@ public class CmsAdvancedDirectEditProvider extends A_CmsDirectEditProvider {
     }
 
     /**
-     * @see org.opencms.workplace.editors.directedit.A_CmsDirectEditProvider#getResourceInfo(java.lang.String)
+     * @see org.opencms.workplace.editors.directedit.A_CmsDirectEditProvider#getResourceInfo(CmsDirectEditParams, java.lang.String)
      *
      * Similar to the method in the superclass, but removes the write permission check, as this is handled differently.
      */
@@ -262,7 +264,7 @@ public class CmsAdvancedDirectEditProvider extends A_CmsDirectEditProvider {
     }
 
     /**
-     * @see org.opencms.workplace.editors.directedit.I_CmsDirectEditProvider#insertDirectEditEnd(javax.servlet.jsp.PageContext)
+     * @see org.opencms.workplace.editors.directedit.I_CmsDirectEditProvider#insertDirectEditEnd(jakarta.servlet.jsp.PageContext)
      */
     public void insertDirectEditEnd(PageContext context) throws JspException {
 
@@ -283,7 +285,7 @@ public class CmsAdvancedDirectEditProvider extends A_CmsDirectEditProvider {
     }
 
     /**
-     * @see org.opencms.workplace.editors.directedit.I_CmsDirectEditProvider#insertDirectEditIncludes(javax.servlet.jsp.PageContext, org.opencms.workplace.editors.directedit.CmsDirectEditParams)
+     * @see org.opencms.workplace.editors.directedit.I_CmsDirectEditProvider#insertDirectEditIncludes(jakarta.servlet.jsp.PageContext, org.opencms.workplace.editors.directedit.CmsDirectEditParams)
      */
     @SuppressWarnings("unused")
     public void insertDirectEditIncludes(PageContext context, CmsDirectEditParams params) throws JspException {
@@ -293,7 +295,7 @@ public class CmsAdvancedDirectEditProvider extends A_CmsDirectEditProvider {
     }
 
     /**
-     * @see org.opencms.workplace.editors.directedit.A_CmsDirectEditProvider#insertDirectEditListMetadata(javax.servlet.jsp.PageContext, org.opencms.gwt.shared.I_CmsContentLoadCollectorInfo)
+     * @see org.opencms.workplace.editors.directedit.A_CmsDirectEditProvider#insertDirectEditListMetadata(jakarta.servlet.jsp.PageContext, org.opencms.gwt.shared.I_CmsContentLoadCollectorInfo)
      */
     @Override
     public void insertDirectEditListMetadata(PageContext context, I_CmsContentLoadCollectorInfo info)
@@ -323,7 +325,7 @@ public class CmsAdvancedDirectEditProvider extends A_CmsDirectEditProvider {
     }
 
     /**
-     * @see org.opencms.workplace.editors.directedit.I_CmsDirectEditProvider#insertDirectEditStart(javax.servlet.jsp.PageContext, org.opencms.workplace.editors.directedit.CmsDirectEditParams)
+     * @see org.opencms.workplace.editors.directedit.I_CmsDirectEditProvider#insertDirectEditStart(jakarta.servlet.jsp.PageContext, org.opencms.workplace.editors.directedit.CmsDirectEditParams)
      */
     public boolean insertDirectEditStart(PageContext context, CmsDirectEditParams params) throws JspException {
 
@@ -528,6 +530,11 @@ public class CmsAdvancedDirectEditProvider extends A_CmsDirectEditProvider {
                 String typePart = newLink.substring(pipePos + 1);
                 isUploadType = uploadTypes.contains(typePart);
             }
+        }
+        if (resource != null) {
+            CmsAvailabilityInfo availabilityInfo = CmsVfsService.getAvailabilityInfo(m_cms, resource);
+            extensions.as().setReleasedText(availabilityInfo.getReleasedText());
+            extensions.as().setExpiredText(availabilityInfo.getExpiredText());
         }
         String uploadFolder = params.getUploadFolder();
         hasNew = params.getButtonSelection().isShowNew();

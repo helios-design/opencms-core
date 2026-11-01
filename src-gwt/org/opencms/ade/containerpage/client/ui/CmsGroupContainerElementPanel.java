@@ -129,6 +129,7 @@ public class CmsGroupContainerElementPanel extends CmsContainerPageElementPanel 
             hasViewPermission,
             hasWritePermission,
             releasedAndNotExpired,
+            null,
             true,
             false,
             null,
@@ -282,7 +283,7 @@ public class CmsGroupContainerElementPanel extends CmsContainerPageElementPanel 
     }
 
     /**
-     * @see org.opencms.ade.containerpage.client.ui.I_CmsDropContainer#highlightContainer()
+     * @see org.opencms.ade.containerpage.client.ui.I_CmsDropContainer#highlightContainer(boolean)
      */
     public void highlightContainer(boolean addSeparators) {
 
@@ -291,7 +292,7 @@ public class CmsGroupContainerElementPanel extends CmsContainerPageElementPanel 
     }
 
     /**
-     * @see org.opencms.ade.containerpage.client.ui.I_CmsDropContainer#highlightContainer(org.opencms.gwt.client.util.CmsPositionBean)
+     * @see org.opencms.ade.containerpage.client.ui.I_CmsDropContainer#highlightContainer(org.opencms.gwt.client.util.CmsPositionBean, boolean)
      */
     public void highlightContainer(CmsPositionBean positionInfo, boolean separators) {
         // separators neither needed nor implemented

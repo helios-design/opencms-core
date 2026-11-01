@@ -84,8 +84,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import javax.mail.internet.InternetAddress;
-
 import org.apache.commons.collections.Buffer;
 import org.apache.commons.collections.buffer.SynchronizedBuffer;
 import org.apache.commons.collections.map.LRUMap;
@@ -94,6 +92,8 @@ import org.apache.commons.logging.Log;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+
+import jakarta.mail.internet.InternetAddress;
 
 /**
  * Monitors OpenCms memory consumption.<p>
@@ -122,6 +122,8 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
         MEMORY_OBJECT,
         /** Organizational Unit cache. */
         ORG_UNIT,
+        /** Organizational unit resources. */
+        ORG_UNIT_RESOURCES,
         /** Permission cache. */
         PERMISSION,
         /** Offline Project cache. */
@@ -223,6 +225,9 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
 
     /** Cache for role lists. */
     private Map<String, List<CmsRole>> m_cacheRoleLists;
+
+    /** Cache for resource paths assigned to OUs. */
+    private Map<String, List<String>> m_orgUnitResources;
 
     /** Cache for user data. */
     private Map<String, CmsUser> m_cacheUser;
@@ -334,8 +339,10 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
     @SuppressWarnings("unchecked")
     public static <T, V> Map<T, V> createLRUCacheMap(int capacity) {
 
-        CacheBuilder<?, ?> builder = CacheBuilder.newBuilder().concurrencyLevel(CONCURRENCY_LEVEL).maximumSize(
-            capacity);
+        CacheBuilder<?, ?> builder = CacheBuilder.newBuilder().concurrencyLevel(CONCURRENCY_LEVEL);
+        if (capacity >= 0) {
+            builder = builder.maximumSize(capacity);
+        }
         return (Map<T, V>)(builder.build().asMap());
     }
 
@@ -667,6 +674,17 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
     }
 
     /**
+     * Caches paths of resources assigned to an organizational unit.
+     *
+     * @param ou the OU FQN
+     * @param resources the list of associated resource paths
+     */
+    public void cacheOrgUnitResources(String ou, List<String> resources) {
+
+        m_orgUnitResources.put(ou, Collections.unmodifiableList(new ArrayList<>(resources)));
+    }
+
+    /**
      * Caches the given permission check result under the given cache key.<p>
      *
      * @param key the cache key
@@ -936,6 +954,7 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
         flushCache(CacheType.PROPERTY_LIST);
         flushCache(CacheType.PROJECT_RESOURCES);
         flushCache(CacheType.PUBLISHED_RESOURCES);
+        flushCache(CacheType.ORG_UNIT_RESOURCES);
     }
 
     /**
@@ -1077,6 +1096,9 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
                     break;
                 case ORG_UNIT:
                     m_cacheOrgUnit.clear();
+                    break;
+                case ORG_UNIT_RESOURCES:
+                    m_orgUnitResources.clear();
                     break;
                 case PERMISSION:
                     m_cachePermission.clear();
@@ -1362,7 +1384,7 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
      * Flushes the user group cache for the user with the given id.
      *
      * @param id the user id
-     **/
+     */
     public void flushUserGroups(CmsUUID id) {
 
         m_cacheUserGroups.clearUser(id);
@@ -1540,6 +1562,17 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
     public CmsOrganizationalUnit getCachedOrgUnit(String key) {
 
         return m_cacheOrgUnit.get(key);
+    }
+
+    /**
+     * Gets the cached OU resource paths.
+     *
+     * @param ou the FQN of an organizational unit
+     * @return the list of paths of the associated resources
+     */
+    public List<String> getCachedOrgUnitResources(String ou) {
+
+        return m_orgUnitResources.get(ou);
     }
 
     /**
@@ -1881,13 +1914,17 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
             CmsLog.INIT.info(
                 Messages.get().getBundle().key(Messages.LOG_MM_INTERVAL_LOG_1, Integer.valueOf(m_intervalLog / 1000)));
             CmsLog.INIT.info(
-                Messages.get().getBundle().key(Messages.LOG_MM_INTERVAL_EMAIL_1, Integer.valueOf(m_intervalEmail / 1000)));
+                Messages.get().getBundle().key(
+                    Messages.LOG_MM_INTERVAL_EMAIL_1,
+                    Integer.valueOf(m_intervalEmail / 1000)));
             CmsLog.INIT.info(
                 Messages.get().getBundle().key(
                     Messages.LOG_MM_INTERVAL_WARNING_1,
                     Integer.valueOf(m_intervalWarning / 1000)));
             CmsLog.INIT.info(
-                Messages.get().getBundle().key(Messages.LOG_MM_INTERVAL_MAX_USAGE_1, Integer.valueOf(m_maxUsagePercent)));
+                Messages.get().getBundle().key(
+                    Messages.LOG_MM_INTERVAL_MAX_USAGE_1,
+                    Integer.valueOf(m_maxUsagePercent)));
 
             if ((m_configuration.getEmailReceiver() == null) || (m_configuration.getEmailSender() == null)) {
                 CmsLog.INIT.info(Messages.get().getBundle().key(Messages.LOG_MM_EMAIL_DISABLED_0));
@@ -1898,7 +1935,10 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
                 int n = 0;
                 while (i.hasNext()) {
                     CmsLog.INIT.info(
-                        Messages.get().getBundle().key(Messages.LOG_MM_EMAIL_RECEIVER_2, Integer.valueOf(n + 1), i.next()));
+                        Messages.get().getBundle().key(
+                            Messages.LOG_MM_EMAIL_RECEIVER_2,
+                            Integer.valueOf(n + 1),
+                            i.next()));
                     n++;
                 }
             }
@@ -1945,6 +1985,9 @@ public class CmsMemoryMonitor implements I_CmsScheduledJob {
         // organizational unit cache
         m_cacheOrgUnit = createLRUCacheMap(cacheSettings.getOrgUnitCacheSize());
         register(CmsDriverManager.class.getName() + ".orgUnitCache", m_cacheOrgUnit);
+
+        m_orgUnitResources = createLRUCacheMap(-1);
+        register(CmsDriverManager.class.getName() + ".orgUnitResources", m_orgUnitResources);
 
         // user groups list cache
         m_cacheUserGroups = new CmsGroupListCache(cacheSettings.getUserGroupsCacheSize());

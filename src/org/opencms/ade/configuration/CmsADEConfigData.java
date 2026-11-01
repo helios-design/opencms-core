@@ -90,6 +90,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -860,6 +861,19 @@ public class CmsADEConfigData {
     }
 
     /**
+     * Gets the internal configuration data for all nodes of the inheritance sequence, in inheritance
+     * order, for read-only configuration origin discovery (the reference and override edges of each
+     * node are available via {@link CmsADEConfigDataInternal#getMasterConfigs()} and
+     * {@link CmsADEConfigDataInternal#getSharedSettingOverride()}).<p>
+     *
+     * @return the internal configuration data of each node in the inheritance sequence
+     */
+    public List<CmsADEConfigDataInternal> getConfigNodes() {
+
+        return m_configSequence.getConfigNodes();
+    }
+
+    /**
      * Gets an (immutable) list of paths of configuration files in inheritance order.
      *
      * @return the list of configuration files
@@ -1251,6 +1265,46 @@ public class CmsADEConfigData {
                 return CmsFormatterConfiguration.EMPTY_CONFIGURATION;
             }
         }
+    }
+
+    /**
+     * Gets the formatter configuration for a resource type.<p>
+     *
+     * @param cms the current CMS context
+     * @param resType the resource type
+     * @param schemaFormatters the resource schema formatters
+     *
+     * @return the configuration of formatters for the resource type
+     */
+    public CmsFormatterConfiguration getFormatters(
+        CmsObject cms,
+        I_CmsResourceType resType,
+        CmsFormatterConfiguration schemaFormatters) {
+
+        String typeName = resType.getTypeName();
+        List<I_CmsFormatterBean> formatters = new ArrayList<I_CmsFormatterBean>();
+        Set<String> types = new HashSet<String>();
+        types.add(typeName);
+        for (CmsFormatterChangeSet changeSet : getFormatterChangeSets()) {
+            if (changeSet != null) {
+                changeSet.applyToTypes(types);
+            }
+        }
+
+        if ((schemaFormatters != null) && types.contains(typeName)) {
+            for (I_CmsFormatterBean formatter : schemaFormatters.getAllFormatters()) {
+                formatters.add(formatter);
+            }
+        }
+
+        try {
+            List<I_CmsFormatterBean> formattersForType = m_formattersByTypeCache.get(typeName);
+            formatters.addAll(formattersForType);
+        } catch (ExecutionException e) {
+            LOG.error(e.getLocalizedMessage(), e);
+
+        }
+        return CmsFormatterConfiguration.create(cms, formatters);
     }
 
     /**
@@ -1711,7 +1765,10 @@ public class CmsADEConfigData {
             CmsXmlContentDefinition def = CmsXmlContentDefinition.getContentDefinitionForType(
                 cms,
                 resType.getTypeName());
-            CmsFormatterConfiguration schemaFormatters = def.getContentHandler().getFormatterConfiguration(cms, null);
+            CmsFormatterConfiguration schemaFormatters = null;
+            if (def != null) {
+                schemaFormatters = def.getContentHandler().getFormatterConfiguration(cms, null);
+            }
             CmsFormatterConfiguration formatters = getFormatters(cms, resType, schemaFormatters);
             for (CmsContainer cont : containers) {
                 if (cont.isEditable()
@@ -1972,9 +2029,9 @@ public class CmsADEConfigData {
      *
      * @throws CmsException if something goes wrong
      */
-    protected Map<String, String> getFolderTypes() throws CmsException {
+    protected Multimap<String, String> getFolderTypes() throws CmsException {
 
-        Map<String, String> result = new HashMap<String, String>();
+        Multimap<String, String> result = HashMultimap.create();
         CmsObject cms = OpenCms.initCmsObject(getCms());
         if (m_data.isModuleConfig()) {
             Set<String> siteRoots = OpenCms.getSiteManager().getSiteRoots();
@@ -1995,53 +2052,13 @@ public class CmsADEConfigData {
                 if (!config.isDetailPagesDisabled()) {
                     String typeName = config.getTypeName();
                     if (!config.isPageRelative()) { // elements stored with container pages can not be used as detail contents
-                        String folderPath = config.getFolderPath(getCms(), null);
+                        String folderPath = config.getFolderPath(cms, null);
                         result.put(CmsStringUtil.joinPaths(folderPath, "/"), typeName);
                     }
                 }
             }
         }
         return result;
-    }
-
-    /**
-     * Gets the formatter configuration for a resource type.<p>
-     *
-     * @param cms the current CMS context
-     * @param resType the resource type
-     * @param schemaFormatters the resource schema formatters
-     *
-     * @return the configuration of formatters for the resource type
-     */
-    protected CmsFormatterConfiguration getFormatters(
-        CmsObject cms,
-        I_CmsResourceType resType,
-        CmsFormatterConfiguration schemaFormatters) {
-
-        String typeName = resType.getTypeName();
-        List<I_CmsFormatterBean> formatters = new ArrayList<I_CmsFormatterBean>();
-        Set<String> types = new HashSet<String>();
-        types.add(typeName);
-        for (CmsFormatterChangeSet changeSet : getFormatterChangeSets()) {
-            if (changeSet != null) {
-                changeSet.applyToTypes(types);
-            }
-        }
-
-        if ((schemaFormatters != null) && types.contains(typeName)) {
-            for (I_CmsFormatterBean formatter : schemaFormatters.getAllFormatters()) {
-                formatters.add(formatter);
-            }
-        }
-
-        try {
-            List<I_CmsFormatterBean> formattersForType = m_formattersByTypeCache.get(typeName);
-            formatters.addAll(formattersForType);
-        } catch (ExecutionException e) {
-            LOG.error(e.getLocalizedMessage(), e);
-
-        }
-        return CmsFormatterConfiguration.create(cms, formatters);
     }
 
     /**
@@ -2145,7 +2162,12 @@ public class CmsADEConfigData {
             }
 
             for (CmsResourceTypeConfig typeConfig : result) {
-                typeConfig.updateBasePath(basePath);
+                typeConfig.updateBasePath(basePath, false);
+            }
+        } else if ((m_data.getBasePath() != null) && !m_data.isModuleConfig()) {
+            String basePath = CmsStringUtil.joinPaths(m_data.getBasePath(), CmsADEManager.CONTENT_FOLDER_NAME);
+            for (CmsResourceTypeConfig typeConfig : result) {
+                typeConfig.updateBasePath(basePath, true);
             }
         }
         if (filterDisabled) {

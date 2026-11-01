@@ -11,6 +11,7 @@
       <transform config="opencms-system.xml" xslt="removeOldSystemEntries.xslt" />
       <transform config="opencms-system.xml" xslt="addRequestHandler.xslt" />
       <transform config="opencms-system.xml" xslt="addUserdata.xslt" />
+      <transform config="opencms-system.xml" xslt="removeSolrHandler.xslt" />
       <transform config="opencms-search.xml" xslt="updateSearch.xslt"/>
       <transform config="opencms-search.xml" xslt="adjustDocumentTypeConfiguration.xslt"/>
       <transform config="opencms-modules.xml" xslt="removeModuleExportPoints.xslt" />
@@ -18,10 +19,11 @@
       <transform config="opencms-vfs.xml" xslt="updateWidgetFormat.xslt" />
       <transform config="opencms-vfs.xml" xslt="addSchemaTypes.xslt" />
       <transform config="opencms-vfs.xml" xslt="addWidgets.xslt" />
+      <transform config="opencms-vfs.xml" xslt="addStoragePolicy.xslt" />
       <transform config="opencms-workplace.xml" xslt="updateStartViewPref.xslt" />
+      <transform config="opencms-workplace.xml" xslt="addPrefCheckReuseWarning.xslt" />
+      <transform config="opencms-workplace.xml" xslt="addPrefShowElementAvailability.xslt" />
       <transform config="opencms-workplace.xml" xslt="removeOldWorkplaceEntries.xslt" />
       <transform config="opencms-importexport.xml" xslt="replaceImportVersions.xslt" />
       <transform config="opencms-importexport.xml" xslt="updateRepositories.xslt" />
-      
-
 </transforms>

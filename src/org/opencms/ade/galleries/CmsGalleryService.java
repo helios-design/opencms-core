@@ -56,6 +56,7 @@ import org.opencms.file.CmsResource;
 import org.opencms.file.CmsResourceFilter;
 import org.opencms.file.CmsUser;
 import org.opencms.file.CmsVfsResourceNotFoundException;
+import org.opencms.file.quota.CmsQuotaManager;
 import org.opencms.file.types.CmsResourceTypeBinary;
 import org.opencms.file.types.CmsResourceTypeFunctionConfig;
 import org.opencms.file.types.CmsResourceTypeImage;
@@ -71,6 +72,8 @@ import org.opencms.gwt.CmsRpcException;
 import org.opencms.gwt.CmsVfsService;
 import org.opencms.gwt.shared.CmsGalleryContainerInfo;
 import org.opencms.gwt.shared.CmsListInfoBean;
+import org.opencms.gwt.shared.CmsQuotaStatus;
+import org.opencms.gwt.shared.CmsQuotaStatus.State;
 import org.opencms.gwt.shared.CmsTemplateContextInfo;
 import org.opencms.i18n.CmsLocaleManager;
 import org.opencms.i18n.CmsMessages;
@@ -135,9 +138,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Predicate;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-
 import org.apache.commons.logging.Log;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -146,6 +146,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * Handles all RPC services related to the gallery dialog.<p>
@@ -646,6 +649,17 @@ public class CmsGalleryService extends CmsGwtService implements I_CmsGalleryServ
     }
 
     /**
+     * Acknowledges the warning actually displayed, without reading a potentially newer warning state.<p>
+     *
+     * @param rootPath the budget scope root path
+     * @param state the displayed state
+     */
+    public void acknowledgeQuotaWarning(String rootPath, State state) {
+
+        getQuotaWarnings().acknowledge(rootPath, state);
+    }
+
+    /**
      * Returns the resource types beans.<p>
      *
      * @param resourceTypes the resource types
@@ -1007,6 +1021,32 @@ public class CmsGalleryService extends CmsGwtService implements I_CmsGalleryServ
             LOG.error(e.getLocalizedMessage(), e);
         }
         return data;
+    }
+
+    /**
+     * Gets the unacknowledged warning for the budget scope containing the gallery context resource.
+     * Uses the existing offline size cache without forcing an update.<p>
+     *
+     * @param referenceRootPath the context resource's VFS root path
+     * @return the warning snapshot, or null if no warning should be shown
+     */
+    public CmsQuotaStatus getQuotaWarning(String referenceRootPath) {
+
+        if (CmsStringUtil.isEmptyOrWhitespaceOnly(referenceRootPath)
+            || getCmsObject().getRequestContext().getCurrentProject().isOnlineProject()) {
+            return null;
+        }
+        try {
+            CmsObject cms = OpenCms.initCmsObject(getCmsObject());
+            cms.getRequestContext().setSiteRoot("");
+            // Check the reference resource with the current user's permissions before reading the quota snapshot.
+            CmsResource resource = cms.readResource(referenceRootPath, CmsResourceFilter.IGNORE_EXPIRATION);
+            CmsGalleryQuotaWarnings warnings = getQuotaWarnings();
+            return warnings.getWarning(
+                CmsQuotaManager.get().getLimitedStatus(resource.getRootPath(), warnings::isAcknowledged));
+        } catch (CmsException e) {
+            return null;
+        }
     }
 
     /**
@@ -2753,6 +2793,27 @@ public class CmsGalleryService extends CmsGwtService implements I_CmsGalleryServ
             }
         }
         return typeProviderMapping;
+    }
+
+    /**
+     * Gets the warning acknowledgements belonging exclusively to this user and session.<p>
+     *
+     * @return the session state
+     */
+    private CmsGalleryQuotaWarnings getQuotaWarnings() {
+
+        HttpSession session = getRequest().getSession();
+        String key = CmsGalleryQuotaWarnings.class.getName()
+            + "."
+            + getCmsObject().getRequestContext().getCurrentUser().getId();
+        synchronized (session) {
+            CmsGalleryQuotaWarnings warnings = (CmsGalleryQuotaWarnings)session.getAttribute(key);
+            if (warnings == null) {
+                warnings = new CmsGalleryQuotaWarnings();
+                session.setAttribute(key, warnings);
+            }
+            return warnings;
+        }
     }
 
     /**

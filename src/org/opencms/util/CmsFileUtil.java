@@ -50,6 +50,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.util.ArrayList;
@@ -191,6 +192,27 @@ public final class CmsFileUtil {
     }
 
     /**
+     * Copies all data from an input stream to an output stream.<p>
+     *
+     * The streams are not closed by this method.<p>
+     *
+     * @param in the input stream
+     * @param out the output stream
+     *
+     * @throws IOException if copying fails
+     */
+    public static void copy(InputStream in, OutputStream out) throws IOException {
+
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = in.read(buffer)) >= 0) {
+            if (read > 0) {
+                out.write(buffer, 0, read);
+            }
+        }
+    }
+
+    /**
      * Simply version of a 1:1 binary file copy.<p>
      *
      * @param fromFile the name of the file to copy
@@ -225,14 +247,16 @@ public final class CmsFileUtil {
      *               is not at hand.
      *
      * @return the formatted filesize to Bytes, KB, MB or GB depending on the given value
-     **/
+     */
     public static String formatFilesize(long filesize, Locale locale) {
 
         String result;
         filesize = Math.abs(filesize);
 
         if (Math.abs(filesize) < 1024) {
-            result = Messages.get().getBundle(locale).key(Messages.GUI_FILEUTIL_FILESIZE_BYTES_1, Long.valueOf(filesize));
+            result = Messages.get().getBundle(locale).key(
+                Messages.GUI_FILEUTIL_FILESIZE_BYTES_1,
+                Long.valueOf(filesize));
         } else if (Math.abs(filesize) < 1048576) {
             // 1048576 = 1024.0 * 1024.0
             result = Messages.get().getBundle(locale).key(
@@ -713,7 +737,7 @@ public final class CmsFileUtil {
 
         // read in the bytes
         int offset = 0;
-        
+
         try {
             int numRead = 0;
             while (offset < size) {

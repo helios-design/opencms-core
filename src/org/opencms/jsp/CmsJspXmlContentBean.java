@@ -29,10 +29,10 @@ package org.opencms.jsp;
 
 import java.util.Locale;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Provides access to XML content tag functions from scriptlet code.<p>
@@ -104,7 +104,8 @@ public class CmsJspXmlContentBean extends CmsJspActionElement {
         String collectorName,
         String collectorParam,
         Locale locale,
-        boolean editable) throws JspException {
+        boolean editable)
+    throws JspException {
 
         return new CmsJspTagContentLoad(null, getJspContext(), collectorName, collectorParam, locale, editable);
     }
@@ -130,7 +131,8 @@ public class CmsJspXmlContentBean extends CmsJspActionElement {
         String pageIndex,
         String pageSize,
         Locale locale,
-        boolean editable) throws JspException {
+        boolean editable)
+    throws JspException {
 
         return new CmsJspTagContentLoad(
             null,

@@ -41,9 +41,9 @@ import org.opencms.workplace.CmsWidgetDialogParameter;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.PageContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.jsp.PageContext;
 
 /**
  * Dialog to enter the settings for the history in the administration view.<p>
@@ -224,14 +224,16 @@ public class CmsHistorySettingsDialog extends CmsWidgetDialog {
                 String.valueOf(CmsHistorySettings.MODE_DELETED_HISTORY_DISABLED),
                 m_historySettings.getMode() == CmsHistorySettings.MODE_DELETED_HISTORY_DISABLED,
                 key(Messages.GUI_HISTORY_SETTINGS_MODE_DISABLED_0)));
-        ret.add(new CmsSelectWidgetOption(
-            String.valueOf(CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_NO_VERSIONS),
-            m_historySettings.getMode() == CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_NO_VERSIONS,
-            key(Messages.GUI_HISTORY_SETTINGS_MODE_KEEP_NO_VERSIONS_0)));
-        ret.add(new CmsSelectWidgetOption(
-            String.valueOf(CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_WITH_VERSIONS),
-            m_historySettings.getMode() == CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_WITH_VERSIONS,
-            key(Messages.GUI_HISTORY_SETTINGS_MODE_KEEP_WITH_VERSIONS_0)));
+        ret.add(
+            new CmsSelectWidgetOption(
+                String.valueOf(CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_NO_VERSIONS),
+                m_historySettings.getMode() == CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_NO_VERSIONS,
+                key(Messages.GUI_HISTORY_SETTINGS_MODE_KEEP_NO_VERSIONS_0)));
+        ret.add(
+            new CmsSelectWidgetOption(
+                String.valueOf(CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_WITH_VERSIONS),
+                m_historySettings.getMode() == CmsHistorySettings.MODE_DELETED_HISTORY_KEEP_WITH_VERSIONS,
+                key(Messages.GUI_HISTORY_SETTINGS_MODE_KEEP_WITH_VERSIONS_0)));
 
         return ret;
     }
