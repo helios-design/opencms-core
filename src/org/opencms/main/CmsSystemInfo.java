@@ -386,6 +386,16 @@ public class CmsSystemInfo {
     }
 
     /**
+     * Gets the date box server time offset in hours.<p>
+     *
+     * @return the date box server time offset in hours
+     */
+    public int getDateBoxServerTimeOffset() {
+
+        return m_dateBoxServerTimeOffset;
+    }
+
+    /**
      * Return the OpenCms default character encoding.<p>
      *
      * The default is set in the opencms-system.xml file.
@@ -397,16 +407,6 @@ public class CmsSystemInfo {
     public String getDefaultEncoding() {
 
         return m_defaultEncoding;
-    }
-
-    /**
-     * Gets the date box server time offset in hours.<p>
-     *
-     * @return the date box server time offset in hours
-     */
-    public int getDateBoxServerTimeOffset() {
-
-        return m_dateBoxServerTimeOffset;
     }
 
     /**
@@ -736,6 +736,16 @@ public class CmsSystemInfo {
     }
 
     /**
+     * Returns whether date box widgets should use server time.<p>
+     *
+     * @return true if date box widgets should use server time
+     */
+    public boolean isDateBoxUseServerTime() {
+
+        return m_dateBoxUseServerTime;
+    }
+
+    /**
      * Returns if the VFS version history is enabled.<p>
      *
      * @return if the VFS version history is enabled
@@ -753,16 +763,6 @@ public class CmsSystemInfo {
     public boolean isRestrictDetailContents() {
 
         return m_restrictDetailContents;
-    }
-
-    /**
-     * Returns whether date box widgets should use server time.<p>
-     *
-     * @return true if date box widgets should use server time
-     */
-    public boolean isDateBoxUseServerTime() {
-
-        return m_dateBoxUseServerTime;
     }
 
     /**

@@ -2260,16 +2260,6 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
-     * Returns the defaultContentEncoding.<p>
-     *
-     * @return the defaultContentEncoding
-     */
-    public String getDefaultContentEncoding() {
-
-        return m_defaultContentEncoding;
-    }
-
-    /**
      * Gets the date box server time offset in hours.<p>
      *
      * @return the date box server time offset in hours
@@ -2277,6 +2267,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public int getDateBoxServerTimeOffset() {
 
         return m_dateBoxServerTimeOffset;
+    }
+
+    /**
+     * Returns the defaultContentEncoding.<p>
+     *
+     * @return the defaultContentEncoding
+     */
+    public String getDefaultContentEncoding() {
+
+        return m_defaultContentEncoding;
     }
 
     /**
@@ -2586,16 +2586,6 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
-     * Returns whether the session client token should include the client IP address.<p>
-     *
-     * @return true if the client IP address should be included
-     */
-    public boolean isSessionClientTokenIp() {
-
-        return m_sessionClientTokenIp;
-    }
-
-    /**
      * Returns the shell server options.<p>
      *
      * @return the shell server options
@@ -2736,16 +2726,6 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
-     * Returns if the VFS version history is enabled.<p>
-     *
-     * @return if the VFS version history is enabled
-     */
-    public boolean isHistoryEnabled() {
-
-        return m_historyEnabled;
-    }
-
-    /**
      * Returns whether date box widgets should use server time.<p>
      *
      * @return true if date box widgets should use server time
@@ -2753,6 +2733,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public boolean isDateBoxUseServerTime() {
 
         return m_dateBoxUseServerTime;
+    }
+
+    /**
+     * Returns if the VFS version history is enabled.<p>
+     *
+     * @return if the VFS version history is enabled
+     */
+    public boolean isHistoryEnabled() {
+
+        return m_historyEnabled;
     }
 
     /**
@@ -2764,6 +2754,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
 
         return (m_restrictDetailContents == null) || Boolean.parseBoolean(m_restrictDetailContents.trim());
 
+    }
+
+    /**
+     * Returns whether the session client token should include the client IP address.<p>
+     *
+     * @return true if the client IP address should be included
+     */
+    public boolean isSessionClientTokenIp() {
+
+        return m_sessionClientTokenIp;
     }
 
     /**
@@ -2909,16 +2909,6 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
-     * Sets the defaultContentEncoding.<p>
-     *
-     * @param defaultContentEncoding the defaultContentEncoding to set
-     */
-    public void setDefaultContentEncoding(String defaultContentEncoding) {
-
-        m_defaultContentEncoding = defaultContentEncoding;
-    }
-
-    /**
      * Sets the date box server time offset in hours.<p>
      *
      * @param offsetHours the date box server time offset in hours
@@ -2940,6 +2930,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public void setDateBoxUseServerTime(String useServerTime) {
 
         m_dateBoxUseServerTime = Boolean.parseBoolean(useServerTime);
+    }
+
+    /**
+     * Sets the defaultContentEncoding.<p>
+     *
+     * @param defaultContentEncoding the defaultContentEncoding to set
+     */
+    public void setDefaultContentEncoding(String defaultContentEncoding) {
+
+        m_defaultContentEncoding = defaultContentEncoding;
     }
 
     /**
@@ -3280,16 +3280,6 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     }
 
     /**
-     * Sets the session storage provider.<p>
-     *
-     * @param sessionStorageProviderClass the session storage provider class to set.
-     */
-    public void setSessionStorageProvider(String sessionStorageProviderClass) {
-
-        m_sessionStorageProvider = sessionStorageProviderClass;
-    }
-
-    /**
      * Sets whether the session client token should include the client IP address.<p>
      *
      * @param sessionClientTokenIp the configured value
@@ -3297,6 +3287,16 @@ public class CmsSystemConfiguration extends A_CmsXmlConfiguration {
     public void setSessionClientTokenIp(String sessionClientTokenIp) {
 
         m_sessionClientTokenIp = Boolean.parseBoolean(sessionClientTokenIp);
+    }
+
+    /**
+     * Sets the session storage provider.<p>
+     *
+     * @param sessionStorageProviderClass the session storage provider class to set.
+     */
+    public void setSessionStorageProvider(String sessionStorageProviderClass) {
+
+        m_sessionStorageProvider = sessionStorageProviderClass;
     }
 
     /**

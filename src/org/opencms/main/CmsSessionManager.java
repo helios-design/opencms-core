@@ -969,16 +969,6 @@ public class CmsSessionManager {
     }
 
     /**
-     * Sets the user session mode.<p>
-     *
-     * @param userSessionMode the user session mode
-     */
-    protected void setUserSessionMode(UserSessionMode userSessionMode) {
-
-        m_userSessionMode = userSessionMode;
-    }
-
-    /**
      * Sets whether client tokens should include the IP address.<p>
      *
      * @param generateIpBasedClientToken true if client tokens should include the IP address
@@ -986,6 +976,16 @@ public class CmsSessionManager {
     protected void setGenerateIpBasedClientToken(boolean generateIpBasedClientToken) {
 
         m_generateIpBasedClientToken = generateIpBasedClientToken;
+    }
+
+    /**
+     * Sets the user session mode.<p>
+     *
+     * @param userSessionMode the user session mode
+     */
+    protected void setUserSessionMode(UserSessionMode userSessionMode) {
+
+        m_userSessionMode = userSessionMode;
     }
 
     /**

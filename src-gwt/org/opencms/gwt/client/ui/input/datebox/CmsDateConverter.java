@@ -33,7 +33,6 @@ import org.opencms.gwt.client.Messages;
 import java.util.Date;
 
 import com.google.gwt.i18n.client.DateTimeFormat;
-
 import com.google.gwt.i18n.client.TimeZone;
 
 /**
@@ -128,8 +127,7 @@ public final class CmsDateConverter {
         } else {
             if (useServerTime()) {
                 result = Z_DATE_FORMAT.format(date, TimeZone.createTimeZone(0));
-            }
-            else {
+            } else {
                 result = Z_DATE_FORMAT.format(date);
             }
         }
@@ -199,10 +197,10 @@ public final class CmsDateConverter {
      * @return the short time format of a given date
      */
     public static String getTime(Date date) {
+
         if (useServerTime()) {
             return Z_TIME_FORMAT.format(date, TimeZone.createTimeZone(0));
-        }
-        else {
+        } else {
             return Z_TIME_FORMAT.format(date);
         }
     }

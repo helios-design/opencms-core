@@ -552,16 +552,6 @@ public class CmsCoreData implements IsSerializable {
     }
 
     /**
-     * Gets the default link to use for opening the workplace.<p>
-     *
-     * @return the default workplace link
-     */
-    public String getDefaultWorkplaceLink() {
-
-        return m_defaultWorkplaceLink;
-    }
-
-    /**
      * Gets the date box server time offset in hours.<p>
      *
      * @return the date box server time offset in hours
@@ -569,6 +559,16 @@ public class CmsCoreData implements IsSerializable {
     public int getDateBoxServerTimeOffset() {
 
         return m_dateBoxServerTimeOffset;
+    }
+
+    /**
+     * Gets the default link to use for opening the workplace.<p>
+     *
+     * @return the default workplace link
+     */
+    public String getDefaultWorkplaceLink() {
+
+        return m_defaultWorkplaceLink;
     }
 
     /**
@@ -789,6 +789,16 @@ public class CmsCoreData implements IsSerializable {
     }
 
     /**
+     * Returns whether date box widgets should use server time.<p>
+     *
+     * @return true if date box widgets should use server time
+     */
+    public boolean isDateBoxUseServerTime() {
+
+        return m_dateBoxUseServerTime;
+    }
+
+    /**
      * Returns true if deactivated types should be hidden in the gallery dialog.
      *
      * @return true if deactivated types should be hidden
@@ -806,16 +816,6 @@ public class CmsCoreData implements IsSerializable {
     public boolean isKeepAlive() {
 
         return m_keepAlive;
-    }
-
-    /**
-     * Returns whether date box widgets should use server time.<p>
-     *
-     * @return true if date box widgets should use server time
-     */
-    public boolean isDateBoxUseServerTime() {
-
-        return m_dateBoxUseServerTime;
     }
 
     /**
@@ -860,16 +860,6 @@ public class CmsCoreData implements IsSerializable {
     }
 
     /**
-     * Sets the maximum number of locale buttons to display in the editor.
-     *
-     * @param maxLocaleButtons the max number of locale buttons to display in the editor
-     */
-    public void setMaxLocaleButtons(int maxLocaleButtons) {
-
-        m_maxLocaleButtons = maxLocaleButtons;
-    }
-
-    /**
      * Sets the date box server time offset in hours.<p>
      *
      * @param dateBoxServerTimeOffset the date box server time offset in hours
@@ -887,6 +877,16 @@ public class CmsCoreData implements IsSerializable {
     public void setDateBoxUseServerTime(boolean dateBoxUseServerTime) {
 
         m_dateBoxUseServerTime = dateBoxUseServerTime;
+    }
+
+    /**
+     * Sets the maximum number of locale buttons to display in the editor.
+     *
+     * @param maxLocaleButtons the max number of locale buttons to display in the editor
+     */
+    public void setMaxLocaleButtons(int maxLocaleButtons) {
+
+        m_maxLocaleButtons = maxLocaleButtons;
     }
 
     /**
